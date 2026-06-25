@@ -7,4 +7,5 @@ export const paths = {
   rootDir,
   configFile: join(rootDir, 'config.json'),
   workspacesFile: join(rootDir, 'workspaces.json'),
+  sessionsFile: join(rootDir, 'sessions.json'),
 };

@@ -1,7 +1,7 @@
 {
   "name": "feishu-message-test",
   "version": "0.1.0",
-  "description": "飞书消息收发测试：扫码创建应用，接收消息并固定内容回复",
+  "description": "飞书消息 bot：扫码创建应用，通过 Claude Code / Codex 处理消息",
   "type": "module",
   "bin": {
     "feishu-message-test": "./bin/feishu-message-test.mjs"
@@ -16,10 +16,12 @@
   "dependencies": {
     "@larksuite/channel": "^0.2.0",
     "commander": "^12.1.0",
+    "cross-spawn": "^7.0.6",
     "graceful-fs": "^4.2.11",
     "qrcode-terminal": "^0.12.0"
   },
   "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
     "@types/graceful-fs": "^4.1.9",
     "@types/node": "^22.10.0",
     "@types/qrcode-terminal": "^0.12.2",
