@@ -2,6 +2,7 @@ import type { LarkChannel, LarkChannelOptions, NormalizedMessage } from '@larksu
 import { createLarkChannel } from '@larksuite/channel';
 import type { AppConfig } from '../config/schema';
 import { getRequireMentionInGroup } from '../config/schema';
+import { WorkspaceStore } from '../workspace/store';
 import { tryHandleCommand } from './commands';
 import { buildFixedReply } from './reply';
 
@@ -10,14 +11,25 @@ export interface BotChannel {
   disconnect(): Promise<void>;
 }
 
+export interface StartChannelOptions {
+  workspaces?: WorkspaceStore;
+}
+
 function log(level: 'info' | 'warn' | 'error', phase: string, detail?: Record<string, unknown>): void {
   const ts = new Date().toISOString();
   const extra = detail ? ` ${JSON.stringify(detail)}` : '';
   console[level](`[${ts}] ${phase}${extra}`);
 }
 
-export async function startChannel(cfg: AppConfig): Promise<BotChannel> {
+export async function startChannel(
+  cfg: AppConfig,
+  startOpts: StartChannelOptions = {},
+): Promise<BotChannel> {
   const { app } = cfg.accounts;
+  const workspaces = startOpts.workspaces ?? new WorkspaceStore();
+  if (!startOpts.workspaces) {
+    await workspaces.load();
+  }
 
   const opts: LarkChannelOptions = {
     appId: app.id,
@@ -47,7 +59,7 @@ export async function startChannel(cfg: AppConfig): Promise<BotChannel> {
   channel.on({
     message: async (msg) => {
       try {
-        await handleMessage(channel, cfg, msg);
+        await handleMessage(channel, cfg, msg, workspaces);
       } catch (err) {
         log('error', 'message-handler-failed', {
           err: err instanceof Error ? err.message : String(err),
@@ -93,6 +105,7 @@ export async function startChannel(cfg: AppConfig): Promise<BotChannel> {
   return {
     channel,
     disconnect: async () => {
+      await workspaces.flush();
       await channel.disconnect();
     },
   };
@@ -102,6 +115,7 @@ async function handleMessage(
   channel: LarkChannel,
   cfg: AppConfig,
   msg: NormalizedMessage,
+  workspaces: WorkspaceStore,
 ): Promise<void> {
   const preview = msg.content.length > 80 ? `${msg.content.slice(0, 80)}…` : msg.content;
   log('info', 'message-received', {
@@ -116,7 +130,7 @@ async function handleMessage(
     return;
   }
 
-  const handled = await tryHandleCommand({ channel, cfg, msg });
+  const handled = await tryHandleCommand({ channel, cfg, msg, workspaces });
   if (handled) {
     log('info', 'command-handled');
     return;

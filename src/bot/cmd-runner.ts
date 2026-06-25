@@ -11,6 +11,7 @@ export async function runShellWithProgress(
   command: string,
   cfg: AppConfig,
   onProgress: (text: string) => Promise<void>,
+  cwd?: string,
 ): Promise<string> {
   const started = Date.now();
   let elapsedSec = 0;
@@ -33,6 +34,7 @@ export async function runShellWithProgress(
 
   try {
     const result = await runShellCommand(command, {
+      cwd,
       timeoutMs: getCmdTimeoutMs(cfg),
     });
     return formatShellResult(command, result);

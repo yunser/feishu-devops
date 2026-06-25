@@ -1,5 +1,6 @@
 import dns from 'node:dns';
 import { startChannel } from '../bot/channel';
+import { WorkspaceStore } from '../workspace/store';
 import { resolveConfig } from './bootstrap';
 
 dns.setDefaultResultOrder('ipv4first');
@@ -21,7 +22,9 @@ export interface StartOptions {
 
 export async function runStart(opts: StartOptions): Promise<void> {
   const { cfg } = await resolveConfig(opts);
-  const bridge = await startChannel(cfg);
+  const workspaces = new WorkspaceStore();
+  await workspaces.load();
+  const bridge = await startChannel(cfg, { workspaces });
 
   const shutdown = async (signal: string) => {
     console.log(`\n收到 ${signal}，正在断开连接…`);

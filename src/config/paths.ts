@@ -6,4 +6,5 @@ const rootDir = process.env.FEISHU_MESSAGE_TEST_HOME ?? join(homedir(), '.feishu
 export const paths = {
   rootDir,
   configFile: join(rootDir, 'config.json'),
+  workspacesFile: join(rootDir, 'workspaces.json'),
 };
