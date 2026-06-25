@@ -4,7 +4,7 @@ import { formatShellResult, runShellCommand } from './run-shell';
 
 export function formatRunningStatus(command: string, elapsedSec: number): string {
   const elapsed = elapsedSec > 0 ? ` (${elapsedSec}s)` : '';
-  return `⏳ 正在执行…${elapsed}\n\n\`\`\`\n$ ${command}\n\`\`\``;
+  return `⏳ 正在执行…${elapsed}\n\n$ ${command}`;
 }
 
 export async function runShellWithProgress(

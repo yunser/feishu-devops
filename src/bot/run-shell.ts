@@ -89,21 +89,28 @@ export function formatShellResult(command: string, result: ShellRunResult): stri
 
   const stdout = result.stdout.trimEnd();
   const stderr = result.stderr.trimEnd();
+  const blockLines: string[] = [];
 
-  if (stdout) lines.push(stdout);
+  if (stdout) blockLines.push(stdout);
   if (stderr) {
-    lines.push('', 'stderr:', stderr);
+    if (stdout) blockLines.push('');
+    blockLines.push('stderr:');
+    blockLines.push(stderr);
   }
+
+  if (blockLines.length > 0) {
+    lines.push('', `\`\`\`bash\n${blockLines.join('\n')}\n\`\`\``);
+  } else if (result.exitCode === 0 && !result.timedOut) {
+    lines.push('', '_(无输出)_');
+  }
+
   if (result.timedOut) {
-    lines.push('', '(命令超时，已终止)');
+    lines.push('', '_（命令超时，已终止）_');
   } else if (result.exitCode !== 0 && result.exitCode !== null) {
-    lines.push('', `(exit ${result.exitCode})`);
+    lines.push('', `_（exit ${result.exitCode}）_`);
   }
   if (result.truncated) {
-    lines.push('', '(输出过长，已截断)');
-  }
-  if (!stdout && !stderr && result.exitCode === 0 && !result.timedOut) {
-    lines.push('(无输出)');
+    lines.push('', '_（输出过长，已截断）_');
   }
 
   return lines.join('\n');

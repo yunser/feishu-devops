@@ -147,7 +147,7 @@ async function handleCmd(args: string, ctx: CommandContext): Promise<void> {
       cwd,
       timeoutMs: getCmdTimeoutMs(ctx.cfg),
     });
-    await replyText(ctx, formatShellResult(args, result));
+    await replyMarkdown(ctx, formatShellResult(args, result));
   }
 }
 
