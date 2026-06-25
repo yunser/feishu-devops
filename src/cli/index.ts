@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import pkg from '../../package.json';
+import { runServiceStart, runServiceStatus, runServiceStop } from './service';
 import { runStart } from './start';
 
 /**
@@ -26,15 +27,49 @@ program
   .description('飞书消息收发测试：扫码创建应用，接收消息并固定内容回复')
   .version(pkg.version, '-v, --version');
 
+const runOptions = [
+  ['-c, --config <path>', '配置文件路径'],
+  ['--app-id <id>', '使用已有飞书应用（跳过扫码创建）'],
+  ['--app-secret <secret>', 'App Secret（配合 --app-id）'],
+  ['--tenant <tenant>', '租户域名：feishu 或 lark（默认 feishu）'],
+  ['--agent <kind>', 'agent 类型：claude / codex / cursor / disabled（默认 claude）'],
+  ['--debug', 'Cursor agent 调试：打印 spawn args 与原生 stream-json 事件'],
+] as const;
+
+function parseRunOpts(opts: {
+  config?: string;
+  appId?: string;
+  appSecret?: string;
+  tenant?: string;
+  agent?: string;
+  debug?: boolean;
+}): {
+  config?: string;
+  appId?: string;
+  appSecret?: string;
+  tenant?: string;
+  agent?: 'claude' | 'codex' | 'cursor' | 'disabled';
+  debug?: boolean;
+} {
+  const agent =
+    opts.agent === 'claude' ||
+    opts.agent === 'codex' ||
+    opts.agent === 'cursor' ||
+    opts.agent === 'disabled'
+      ? opts.agent
+      : undefined;
+  return { ...opts, agent, debug: opts.debug === true };
+}
+
 program
   .command('run')
   .description('前台运行 bot，接收消息并通过 Claude Code / Codex / Cursor 回复')
-  .option('-c, --config <path>', '配置文件路径')
-  .option('--app-id <id>', '使用已有飞书应用（跳过扫码创建）')
-  .option('--app-secret <secret>', 'App Secret（配合 --app-id）')
-  .option('--tenant <tenant>', '租户域名：feishu 或 lark（默认 feishu）')
-  .option('--agent <kind>', 'agent 类型：claude / codex / cursor / disabled（默认 claude）')
-  .option('--debug', 'Cursor agent 调试：打印 spawn args 与原生 stream-json 事件')
+  .option(...runOptions[0])
+  .option(...runOptions[1])
+  .option(...runOptions[2])
+  .option(...runOptions[3])
+  .option(...runOptions[4])
+  .option(...runOptions[5])
   .action(async (opts: {
     config?: string;
     appId?: string;
@@ -43,14 +78,41 @@ program
     agent?: string;
     debug?: boolean;
   }) => {
-    const agent =
-      opts.agent === 'claude' ||
-      opts.agent === 'codex' ||
-      opts.agent === 'cursor' ||
-      opts.agent === 'disabled'
-        ? opts.agent
-        : undefined;
-    await runStart({ ...opts, agent, debug: opts.debug === true });
+    await runStart(parseRunOpts(opts));
+  });
+
+program
+  .command('start')
+  .description('安装并以后台 daemon 方式启动 bot（macOS launchd / Linux systemd / Windows 任务计划）')
+  .option(...runOptions[0])
+  .option(...runOptions[1])
+  .option(...runOptions[2])
+  .option(...runOptions[3])
+  .option(...runOptions[4])
+  .option(...runOptions[5])
+  .action(async (opts: {
+    config?: string;
+    appId?: string;
+    appSecret?: string;
+    tenant?: string;
+    agent?: string;
+    debug?: boolean;
+  }) => {
+    await runServiceStart(parseRunOpts(opts));
+  });
+
+program
+  .command('stop')
+  .description('停止后台 daemon')
+  .action(async () => {
+    await runServiceStop();
+  });
+
+program
+  .command('status')
+  .description('查看后台 daemon 状态')
+  .action(async () => {
+    await runServiceStatus();
   });
 
 program.parseAsync(normalizeArgv(process.argv)).catch((err: unknown) => {

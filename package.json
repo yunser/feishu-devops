@@ -8,9 +8,9 @@
   },
   "scripts": {
     "dev": "tsx watch src/cli/index.ts run",
-    "start": "tsx src/cli/index.ts run",
+    "start": "tsx src/cli/index.ts start",
     "build": "tsup",
-    "start:dist": "node bin/feishu-message-test.mjs run",
+    "start:dist": "node bin/feishu-message-test.mjs start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
