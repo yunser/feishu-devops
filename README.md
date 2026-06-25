@@ -85,7 +85,7 @@ node bin/feishu-message-test.mjs run --app-id cli_xxx --app-secret <secret> --te
 - `requireMentionInGroup`：群中是否必须 @ 机器人才响应（默认 `true`）；私聊始终响应
 - `defaultReply`：非 `ping` 消息时的固定回复内容
 - `cmdEnabled`：是否允许 `/cmd`（默认 `true`）
-- `cmdTimeoutSeconds`：`/cmd` 超时秒数（默认 `30`，最大 `120`）
+- `cmdTimeoutSeconds`：`/cmd` 超时秒数（默认 `300`，最大 `1800`）
 - `cmdProgressIntervalSeconds`：`/cmd` 执行中状态刷新间隔（默认 `5` 秒；设为 `0` 则只显示初始「正在执行」不周期性刷新，最大 `60`）
 
 > **安全提示**：`/cmd` 会在运行 bot 的本机执行任意 shell 命令，仅建议在可信环境使用。

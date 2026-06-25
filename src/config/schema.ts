@@ -27,7 +27,7 @@ export interface AppPreferences {
   defaultReply?: string;
   /** 是否允许 /cmd 执行本机 shell 命令。默认 true。 */
   cmdEnabled?: boolean;
-  /** /cmd 超时时间（秒）。默认 30。 */
+  /** /cmd 超时时间（秒）。默认 300。 */
   cmdTimeoutSeconds?: number;
   /** /cmd 执行中状态刷新间隔（秒）。0 表示仅显示初始状态不刷新。默认 5。 */
   cmdProgressIntervalSeconds?: number;
@@ -75,8 +75,8 @@ export function isCmdEnabled(cfg: AppConfig): boolean {
 
 export function getCmdTimeoutMs(cfg: AppConfig): number {
   const raw = cfg.preferences?.cmdTimeoutSeconds;
-  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw <= 0) return 30_000;
-  return Math.min(Math.floor(raw), 120) * 1000;
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw <= 0) return 300_000;
+  return Math.min(Math.floor(raw), 1800) * 1000;
 }
 
 /** /cmd 执行中刷新间隔。0 = 不周期性刷新。默认 5000ms。 */

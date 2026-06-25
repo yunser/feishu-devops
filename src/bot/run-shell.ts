@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 
-const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_TIMEOUT_MS = 300_000;
 const MAX_OUTPUT_CHARS = 3_500;
 
 export interface ShellRunResult {
