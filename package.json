@@ -11,7 +11,9 @@
     "start": "tsx src/cli/index.ts start",
     "build": "tsup",
     "start:dist": "node bin/feishu-message-test.mjs start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm typecheck && pnpm build",
+    "publish": "pnpm publish"
   },
   "dependencies": {
     "@larksuite/channel": "^0.2.0",

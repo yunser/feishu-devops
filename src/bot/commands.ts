@@ -56,7 +56,7 @@ const HANDLERS: Record<string, Handler> = {
   '/stop': handleStop,
   '/status': handleStatus,
   '/resume': handleResume,
-  '/switch': handleSwitch,
+  '/use': handleSwitch,
 };
 
 const CARD_HANDLERS: Record<string, Handler> = {
@@ -377,7 +377,7 @@ async function handleSwitch(args: string, ctx: CommandContext): Promise<void> {
 
   const kind = args.trim().toLowerCase();
   if (!isSwitchableAgentKind(kind)) {
-    await replyText(ctx, '用法: `/switch claude` | `/switch codex` | `/switch cursor`');
+    await replyText(ctx, '用法: `/use claude` | `/use codex` | `/use cursor`');
     return;
   }
 
