@@ -125,6 +125,49 @@ export async function runServiceStop(): Promise<void> {
   console.log('  通过 `npm start` 或 `feishu-message-test start` 可再次启动');
 }
 
+/**
+ * `restart` — bounce the running daemon in place.
+ * If not running, behaves like `start`.
+ */
+export async function runServiceRestart(opts: ServiceStartOptions = {}): Promise<void> {
+  const extraRunArgs = buildExtraRunArgs(opts);
+  await ensureConfigured(opts);
+  const adapter = requireAdapter('restart', extraRunArgs);
+
+  if (!adapter.fileExists()) {
+    console.error('bot 还没在后台运行过。请先运行 `npm start` 启动。');
+    process.exit(1);
+  }
+
+  if (adapter.isRunning()) {
+    const r = await adapter.restart();
+    if (!r.ok) {
+      printServiceFailure(r.stderr);
+      process.exit(1);
+    }
+    console.log('✓ bot 已重启');
+    console.log('  日志:');
+    console.log(`    ${daemonStdoutPath()}`);
+    console.log(`    ${daemonStderrPath()}`);
+    console.log(`  配置目录: ${paths.rootDir}`);
+    console.log('  停止: feishu-message-test stop');
+    return;
+  }
+
+  await adapter.install();
+  const r = await adapter.start();
+  if (!r.ok) {
+    printServiceFailure(r.stderr);
+    process.exit(1);
+  }
+  console.log('✓ bot 已在后台启动');
+  console.log('  日志:');
+  console.log(`    ${daemonStdoutPath()}`);
+  console.log(`    ${daemonStderrPath()}`);
+  console.log(`  配置目录: ${paths.rootDir}`);
+  console.log('  停止: feishu-message-test stop');
+}
+
 export async function runServiceStatus(): Promise<void> {
   const adapter = requireAdapter('status', []);
   if (!adapter.fileExists()) {

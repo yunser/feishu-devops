@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import pkg from '../../package.json';
-import { runServiceStart, runServiceStatus, runServiceStop } from './service';
+import { runServiceRestart, runServiceStart, runServiceStatus, runServiceStop } from './service';
 import { runStart } from './start';
 
 /**
@@ -106,6 +106,26 @@ program
   .description('停止后台 daemon')
   .action(async () => {
     await runServiceStop();
+  });
+
+program
+  .command('restart')
+  .description('重启后台 daemon')
+  .option(...runOptions[0])
+  .option(...runOptions[1])
+  .option(...runOptions[2])
+  .option(...runOptions[3])
+  .option(...runOptions[4])
+  .option(...runOptions[5])
+  .action(async (opts: {
+    config?: string;
+    appId?: string;
+    appSecret?: string;
+    tenant?: string;
+    agent?: string;
+    debug?: boolean;
+  }) => {
+    await runServiceRestart(parseRunOpts(opts));
   });
 
 program
