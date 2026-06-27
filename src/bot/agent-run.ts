@@ -210,6 +210,7 @@ async function runMarkdownReply(
         markdownCtrl = ctrl;
         await ctrl.setContent(renderText(filterForPrefs(latestState)));
         await renderDone;
+        await ctrl.setContent(renderText(filterForPrefs(latestState)));
       },
     },
     sendOpts,
@@ -270,6 +271,7 @@ async function runCardReply(
           cardCtrl = ctrl;
           await ctrl.update(renderCard(filterForPrefs(latestState)));
           await renderDone;
+          await ctrl.update(renderCard(filterForPrefs(latestState)));
         },
       },
     },

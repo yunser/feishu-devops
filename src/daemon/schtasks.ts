@@ -20,6 +20,34 @@ export interface LauncherInputs {
   cwd: string;
 }
 
+const WINDOWS_DAEMON_ENV_KEYS = [
+  'USERPROFILE',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'HOME',
+  'HOMEPATH',
+  'HOMEDRIVE',
+  'TEMP',
+  'TMP',
+  'USERNAME',
+  'USERDOMAIN',
+  'SystemRoot',
+  'ComSpec',
+  'SystemDrive',
+  'ProgramFiles',
+  'ProgramFiles(x86)',
+] as const;
+
+function windowsDaemonEnvSetLines(): string[] {
+  const lines: string[] = [];
+  for (const key of WINDOWS_DAEMON_ENV_KEYS) {
+    const value = process.env[key];
+    if (!value) continue;
+    lines.push(`set "${key}=${value.replace(/"/g, '""')}"`);
+  }
+  return lines;
+}
+
 export function buildLauncherCmd(inputs: LauncherInputs): string {
   const cmdParts = [inputs.program, ...inputs.runArgs]
     .map((part) => `"${part.replace(/"/g, '""')}"`)
@@ -27,6 +55,7 @@ export function buildLauncherCmd(inputs: LauncherInputs): string {
   return [
     '@echo off',
     `cd /d "${inputs.cwd.replace(/"/g, '""')}"`,
+    ...windowsDaemonEnvSetLines(),
     `set "FEISHU_DEVOPS_HOME=${inputs.channelHome}"`,
     `set "PATH=${inputs.envPath}"`,
     `${cmdParts} >> "${daemonStdoutPath()}" 2>> "${daemonStderrPath()}"`,

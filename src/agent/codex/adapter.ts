@@ -1,9 +1,9 @@
-import { createInterface } from 'node:readline';
 import type { Readable, Writable } from 'node:stream';
 import { join } from 'node:path';
 import type { SandboxMode } from '../../config/profile-schema';
 import { log } from '../../core/logger';
 import { mergeProcessEnv, spawnProcess, type SpawnedProcessByStdio } from '../../platform/spawn';
+import { readStdoutLines } from '../read-stdout-lines';
 import { SpawnFailed } from '../../runtime/errors';
 import { prefixBridgeSystemPrompt } from '../bridge-system-prompt';
 import { buildLarkChannelEnv, type LarkChannelEnvContext } from '../lark-channel-env';
@@ -218,18 +218,7 @@ async function* createEventStream(
     return;
   }
 
-  const rl = createInterface({ input: child.stdout, crlfDelay: Infinity });
-  let sawStdout = false;
-  let silentExitTimer: ReturnType<typeof setTimeout> | undefined;
-  const closeSilentStdout = (): void => {
-    silentExitTimer = setTimeout(() => {
-      if (!sawStdout && !child.stdout.readableEnded) child.stdout.destroy();
-    }, 50);
-  };
-  child.once('exit', closeSilentStdout);
-  try {
-    for await (const line of rl) {
-      sawStdout = true;
+  for await (const line of readStdoutLines(child.stdout)) {
       const trimmed = line.trim();
       if (!trimmed) continue;
       let parsed: unknown;
@@ -238,12 +227,7 @@ async function* createEventStream(
       } catch {
         continue;
       }
-      yield* translator.translate(parsed);
-    }
-  } finally {
-    if (silentExitTimer) clearTimeout(silentExitTimer);
-    child.removeListener('exit', closeSilentStdout);
-    rl.close();
+    yield* translator.translate(parsed);
   }
 
   const earlyRuntimeError = getError();

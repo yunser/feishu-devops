@@ -1,7 +1,7 @@
-import { createInterface } from 'node:readline';
 import type { Readable } from 'node:stream';
 import { log } from '../../core/logger';
 import { mergeProcessEnv, spawnProcess, type SpawnedProcessByStdio } from '../../platform/spawn';
+import { readStdoutLines } from '../read-stdout-lines';
 import { buildBridgeSystemPrompt } from '../bridge-system-prompt';
 import { buildLarkChannelEnv, type LarkChannelEnvContext } from '../lark-channel-env';
 import { checkAgentAvailability, type AgentAvailability } from '../preflight';
@@ -202,18 +202,7 @@ async function* createEventStream(
   }
 
   const streamState = createCursorStreamState();
-  const rl = createInterface({ input: child.stdout, crlfDelay: Infinity });
-  let sawStdout = false;
-  let silentExitTimer: ReturnType<typeof setTimeout> | undefined;
-  const closeSilentStdout = (): void => {
-    silentExitTimer = setTimeout(() => {
-      if (!sawStdout && !child.stdout.readableEnded) child.stdout.destroy();
-    }, 50);
-  };
-  child.once('exit', closeSilentStdout);
-  try {
-    for await (const line of rl) {
-      sawStdout = true;
+  for await (const line of readStdoutLines(child.stdout)) {
       const trimmed = line.trim();
       if (!trimmed) continue;
       let parsed: unknown;
@@ -225,12 +214,7 @@ async function* createEventStream(
       if (debug) {
         console.log('[cursor debug] event', parsed);
       }
-      yield* translateEvent(parsed, streamState);
-    }
-  } finally {
-    if (silentExitTimer) clearTimeout(silentExitTimer);
-    child.removeListener('exit', closeSilentStdout);
-    rl.close();
+    yield* translateEvent(parsed, streamState);
   }
 
   const earlyRuntimeError = getError();
