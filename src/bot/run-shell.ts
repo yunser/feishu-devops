@@ -31,6 +31,65 @@ export interface SpawnShellOptions {
 }
 
 let expectPathPromise: Promise<string | undefined> | undefined;
+let windowsPowerShellPath: string | undefined;
+
+function resolveWindowsPowerShell(): string {
+  if (windowsPowerShellPath) return windowsPowerShellPath;
+  if (process.env.FEISHU_DEVOPS_SHELL) {
+    windowsPowerShellPath = process.env.FEISHU_DEVOPS_SHELL;
+    return windowsPowerShellPath;
+  }
+
+  for (const exe of ['pwsh', 'pwsh.exe', 'powershell.exe']) {
+    const found = spawnSync('where', [exe], { encoding: 'utf8', windowsHide: true });
+    if (found.status === 0) {
+      const line = found.stdout.trim().split(/\r?\n/)[0]?.trim();
+      if (line) {
+        windowsPowerShellPath = line;
+        return windowsPowerShellPath;
+      }
+    }
+  }
+
+  windowsPowerShellPath = 'powershell.exe';
+  return windowsPowerShellPath;
+}
+
+function buildShellSpawnArgs(command: string, interactive: boolean): { file: string; args: string[] } | null {
+  if (process.platform !== 'win32') return null;
+
+  const args = ['-NoProfile'];
+  if (!interactive) args.push('-NonInteractive');
+  args.push('-Command', command);
+  return { file: resolveWindowsPowerShell(), args };
+}
+
+function spawnShellChild(
+  command: string,
+  opts: {
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    stdio: ['pipe', 'pipe', 'pipe'] | ['ignore', 'pipe', 'pipe'];
+    interactive?: boolean;
+  },
+): ChildProcess {
+  const shellArgs = buildShellSpawnArgs(command, opts.interactive ?? false);
+  if (shellArgs) {
+    return spawn(shellArgs.file, shellArgs.args, {
+      cwd: opts.cwd,
+      env: opts.env,
+      stdio: opts.stdio,
+      windowsHide: true,
+    });
+  }
+
+  return spawn(command, {
+    shell: true,
+    cwd: opts.cwd,
+    env: opts.env,
+    stdio: opts.stdio,
+  });
+}
 
 async function resolveExpectPath(): Promise<string | undefined> {
   if (!expectPathPromise) {
@@ -144,11 +203,11 @@ function spawnPipeShellCommand(
   const cwd = opts.cwd ?? process.cwd();
 
   return new Promise((resolve) => {
-    const child = spawn(command, {
-      shell: true,
+    const child = spawnShellChild(command, {
       cwd,
       env: process.env,
       stdio: ['pipe', 'pipe', 'pipe'],
+      interactive: opts.interactive,
     });
 
     opts.onSpawn?.(childSpawnHandle(child));
@@ -259,11 +318,14 @@ function spawnExpectShellCommand(
 function spawnPtyShellCommand(command: string, opts: SpawnShellOptions): Promise<ShellRunResult> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const cwd = opts.cwd ?? process.cwd();
-  const shell = process.env.SHELL || '/bin/bash';
+  const shellArgs =
+    process.platform === 'win32'
+      ? { file: resolveWindowsPowerShell(), args: ['-NoProfile', '-Command', command] }
+      : { file: process.env.SHELL || '/bin/bash', args: ['-c', command] };
 
   let term: pty.IPty;
   try {
-    term = pty.spawn(shell, ['-c', command], {
+    term = pty.spawn(shellArgs.file, shellArgs.args, {
       cwd,
       env: process.env,
       cols: PTY_COLS,
@@ -320,8 +382,7 @@ export async function spawnShellCommand(
     const cwd = opts.cwd ?? process.cwd();
 
     return new Promise((resolve) => {
-      const child = spawn(command, {
-        shell: true,
+      const child = spawnShellChild(command, {
         cwd,
         env: process.env,
         stdio: ['ignore', 'pipe', 'pipe'],
