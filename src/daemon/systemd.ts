@@ -78,6 +78,19 @@ function runSystemctl(args: string[]): SystemctlResult {
   };
 }
 
+/** Whether `systemctl --user` can talk to the session D-Bus (SSH/Docker often cannot). */
+export function isUserBusAvailable(): boolean {
+  const r = spawnSync('systemctl', ['--user', 'is-system-running'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const combined = `${r.stderr ?? ''}\n${r.stdout ?? ''}`;
+  if (/Failed to connect to bus|Couldn't connect to bus|No medium found|找不到介质/i.test(combined)) {
+    return false;
+  }
+  return r.status !== null;
+}
+
 export function daemonReload(): SystemctlResult {
   return runSystemctl(['daemon-reload']);
 }

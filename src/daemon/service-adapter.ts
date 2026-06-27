@@ -1,6 +1,7 @@
 import * as launchd from './launchd';
-import { launchAgentPlistPath, systemdUnitPath, windowsTaskName } from './paths';
+import { launchAgentPlistPath, spawnDaemonPidPath, systemdUnitPath, windowsTaskName } from './paths';
 import * as schtasks from './schtasks';
+import * as spawnDaemon from './spawn-daemon';
 import * as systemd from './systemd';
 
 export interface ServiceResult {
@@ -43,6 +44,27 @@ function makeLaunchdAdapter(extraRunArgs: string[]): ServiceAdapter {
     parseStatus: (text) => ({
       pid: text.match(/pid\s*=\s*(\d+)/)?.[1],
       lastExit: text.match(/last exit code\s*=\s*(-?\d+)/i)?.[1],
+    }),
+  };
+}
+
+function makeSpawnDaemonAdapter(extraRunArgs: string[]): ServiceAdapter {
+  return {
+    platformName: 'detached process (Linux fallback)',
+    fileExists: () => spawnDaemon.markerExists(),
+    isRunning: () => spawnDaemon.isRunning(),
+    servicePath: () => spawnDaemonPidPath(),
+    install: () => spawnDaemon.install(extraRunArgs),
+    start: () => spawnDaemon.start(extraRunArgs),
+    stop: () => spawnDaemon.stop(),
+    stopAndDisableAutostart: () => spawnDaemon.stopAndDisableAutostart(),
+    restart: () => spawnDaemon.restart(extraRunArgs),
+    waitUntilStopped: (timeoutMs) => spawnDaemon.waitUntilInactive(timeoutMs),
+    deleteFile: () => spawnDaemon.deleteMarker(),
+    describeStatus: () => spawnDaemon.describeService(),
+    parseStatus: (text) => ({
+      pid: text.match(/pid[:\s]+(\d+)/i)?.[1],
+      lastExit: undefined,
     }),
   };
 }
@@ -102,7 +124,11 @@ function makeSchtasksAdapter(extraRunArgs: string[]): ServiceAdapter {
 
 export function getServiceAdapter(extraRunArgs: string[] = []): ServiceAdapter | null {
   if (process.platform === 'darwin') return makeLaunchdAdapter(extraRunArgs);
-  if (process.platform === 'linux') return makeSystemdAdapter(extraRunArgs);
+  if (process.platform === 'linux') {
+    return systemd.isUserBusAvailable()
+      ? makeSystemdAdapter(extraRunArgs)
+      : makeSpawnDaemonAdapter(extraRunArgs);
+  }
   if (process.platform === 'win32') return makeSchtasksAdapter(extraRunArgs);
   return null;
 }

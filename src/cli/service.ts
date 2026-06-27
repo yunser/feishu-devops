@@ -44,6 +44,23 @@ function printServiceFailure(stderr: string): void {
     return;
   }
 
+  if (/Failed to connect to bus|Couldn't connect to bus|No medium found|找不到介质/i.test(cleaned)) {
+    console.error('✗ bot 启动失败。');
+    console.error('');
+    console.error('当前环境无法连接 systemd 用户 D-Bus（常见于 SSH、Docker、无图形会话）。');
+    console.error('');
+    console.error('可选方案：');
+    console.error('  1. 前台运行: feishu-devops run');
+    console.error('  2. 启用 systemd 用户会话后重试:');
+    console.error('       export XDG_RUNTIME_DIR=/run/user/$(id -u)');
+    console.error('       sudo loginctl enable-linger $USER');
+    console.error('       npm start');
+    console.error('');
+    console.error('原始错误:');
+    console.error(`  ${cleaned}`);
+    return;
+  }
+
   console.error('✗ bot 启动失败:');
   console.error(cleaned);
 }
@@ -98,6 +115,9 @@ export async function runServiceStart(opts: ServiceStartOptions = {}): Promise<v
   }
 
   console.log('✓ bot 已在后台启动');
+  if (adapter.platformName.includes('fallback')) {
+    console.log('  后台方式: detached 进程（systemd 用户会话不可用）');
+  }
   console.log('  日志:');
   console.log(`    ${daemonStdoutPath()}`);
   console.log(`    ${daemonStderrPath()}`);
@@ -161,6 +181,9 @@ export async function runServiceRestart(opts: ServiceStartOptions = {}): Promise
     process.exit(1);
   }
   console.log('✓ bot 已在后台启动');
+  if (adapter.platformName.includes('fallback')) {
+    console.log('  后台方式: detached 进程（systemd 用户会话不可用）');
+  }
   console.log('  日志:');
   console.log(`    ${daemonStdoutPath()}`);
   console.log(`    ${daemonStderrPath()}`);

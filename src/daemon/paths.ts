@@ -40,3 +40,11 @@ export function daemonStdoutPath(): string {
 export function daemonStderrPath(): string {
   return join(daemonLogDir(), 'daemon-stderr.log');
 }
+
+export function spawnDaemonPidPath(): string {
+  return join(daemonLogDir(), 'bot.pid');
+}
+
+export function spawnDaemonMarkerPath(): string {
+  return join(daemonLogDir(), '.spawn-daemon');
+}
