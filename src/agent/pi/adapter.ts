@@ -1,7 +1,17 @@
 import type { Readable } from 'node:stream';
 import { log } from '../../core/logger';
-import { mergeProcessEnv, spawnProcess, type SpawnedProcessByStdio } from '../../platform/spawn';
-import { readStdoutLines } from '../read-stdout-lines';
+import {
+  formatSpawnArgsForLog,
+  mergeProcessEnv,
+  spawnProcess,
+  type SpawnedProcessByStdio,
+} from '../../platform/spawn';
+import {
+  createStdoutJsonStats,
+  readStdoutJsonLines,
+  summarizeAgentEnv,
+  type StdoutJsonStats,
+} from '../read-stdout-lines';
 import { buildBridgeSystemPrompt } from '../bridge-system-prompt';
 import { buildLarkChannelEnv, type LarkChannelEnvContext } from '../lark-channel-env';
 import { checkAgentAvailability, type AgentAvailability } from '../preflight';
@@ -93,12 +103,15 @@ export class PiAdapter implements AgentAdapter {
 
     log.info('agent', 'spawn', {
       pid: child.pid ?? null,
+      binary: this.binary,
       cwd: opts.cwd ?? process.cwd(),
       hasSession: Boolean(opts.sessionId),
       promptChars: opts.prompt.length,
       model: opts.model,
       agent: 'pi',
+      args: formatSpawnArgsForLog(args),
     });
+    log.info('agent', 'spawn-env', { agent: 'pi', ...summarizeAgentEnv(process.env) });
 
     const stderrChunks: Buffer[] = [];
     let runtimeError: Error | null = null;
@@ -196,19 +209,28 @@ async function* createEventStream(
   }
 
   const streamState = createPiStreamState();
-  for await (const line of readStdoutLines(child.stdout)) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(trimmed);
-      } catch {
-        continue;
-      }
-      if (debug) {
-        console.log('[pi debug] event', parsed);
-      }
+  const stats: StdoutJsonStats = createStdoutJsonStats();
+  for await (const parsed of readStdoutJsonLines(child.stdout, { agent: 'pi', debug, stats })) {
+    if (debug) {
+      console.log('[pi debug] event', parsed);
+    }
     yield* translateEvent(parsed, streamState);
+  }
+  log.info('agent', 'stdout-summary', {
+    agent: 'pi',
+    rawLines: stats.rawLines,
+    parsedOk: stats.parsedOk,
+    parseFailed: stats.parseFailed,
+    exitCode: child.exitCode,
+    signal: child.signalCode,
+    ...(stats.parseFailed > 0 ? { failedSamples: stats.failedSamples } : {}),
+  });
+  if (stats.rawLines === 0) {
+    log.warn('agent', 'stdout-empty', {
+      agent: 'pi',
+      exitCode: child.exitCode,
+      signal: child.signalCode,
+    });
   }
 
   const earlyRuntimeError = getError();

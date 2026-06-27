@@ -1,8 +1,18 @@
-import type { Readable } from 'node:stream';
+import type { Readable, Writable } from 'node:stream';
 import { log } from '../../core/logger';
-import { mergeProcessEnv, spawnProcess, type SpawnedProcessByStdio } from '../../platform/spawn';
-import { readStdoutLines } from '../read-stdout-lines';
-import { buildBridgeSystemPrompt } from '../bridge-system-prompt';
+import {
+  formatSpawnArgsForLog,
+  mergeProcessEnv,
+  spawnProcess,
+  type SpawnedProcessByStdio,
+} from '../../platform/spawn';
+import {
+  createStdoutJsonStats,
+  readStdoutJsonLines,
+  summarizeAgentEnv,
+  type StdoutJsonStats,
+} from '../read-stdout-lines';
+import { prefixBridgeSystemPrompt } from '../bridge-system-prompt';
 import { buildLarkChannelEnv, type LarkChannelEnvContext } from '../lark-channel-env';
 import { checkAgentAvailability, type AgentAvailability } from '../preflight';
 import {
@@ -20,7 +30,7 @@ export interface ClaudeAdapterOptions {
   larkChannel?: LarkChannelEnvContext;
 }
 
-type ClaudeChild = SpawnedProcessByStdio<null, Readable, Readable>;
+type ClaudeChild = SpawnedProcessByStdio<Writable, Readable, Readable>;
 
 export class ClaudeAdapter implements AgentAdapter {
   readonly id = 'claude';
@@ -57,16 +67,20 @@ export class ClaudeAdapter implements AgentAdapter {
       throw new Error('cwd is required for ClaudeAdapter.run');
     }
 
+    // Pass the prompt via stdin, not argv. The bridge prompt is large and full
+    // of `"`, backticks and `<>` (JSON examples, <bridge_context> tags). On
+    // Windows the agent is a `.cmd` shim spawned through cmd.exe, whose argument
+    // quoting cannot reliably carry those characters — the breakage silently
+    // swallowed `--output-format stream-json` and claude fell back to plain-text
+    // mode, producing "未返回内容". Short ASCII flags only on the command line.
+    const stdinPrompt = prefixBridgeSystemPrompt(opts.prompt, this.botIdentity);
     const args = [
       '-p',
-      opts.prompt,
       '--output-format',
       'stream-json',
       '--verbose',
       '--permission-mode',
       opts.permissionMode ?? CLAUDE_DEFAULT_PERMISSION_MODE,
-      '--append-system-prompt',
-      buildBridgeSystemPrompt(this.botIdentity),
     ];
     if (opts.sessionId) args.push('--resume', opts.sessionId);
     if (opts.model) args.push('--model', opts.model);
@@ -74,16 +88,20 @@ export class ClaudeAdapter implements AgentAdapter {
     const child = spawnProcess(this.binary, args, {
       cwd: opts.cwd,
       env: mergeProcessEnv(process.env, buildLarkChannelEnv(this.larkChannel)),
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['pipe', 'pipe', 'pipe'],
     }) as ClaudeChild;
 
     log.info('agent', 'spawn', {
       pid: child.pid ?? null,
+      binary: this.binary,
       cwd: opts.cwd ?? process.cwd(),
       hasSession: Boolean(opts.sessionId),
-      promptChars: opts.prompt.length,
+      promptChars: stdinPrompt.length,
+      via: 'stdin',
       model: opts.model,
+      args: formatSpawnArgsForLog(args),
     });
+    log.info('agent', 'spawn-env', { agent: 'claude', ...summarizeAgentEnv(process.env) });
 
     // Listeners MUST be attached synchronously here, before we return.
     // The 'error' and exit-related events can fire in the next tick; if we
@@ -115,6 +133,10 @@ export class ClaudeAdapter implements AgentAdapter {
     child.on('exit', (code, signal) => {
       log.info('agent', 'exit', { pid: child.pid ?? null, code, signal });
     });
+    child.stdin.on('error', (err) => {
+      log.warn('agent', 'stdin-error', { message: err.message });
+    });
+    child.stdin.end(stdinPrompt, 'utf8');
 
     // Default 5s if caller didn't specify — claude often has live
     // subprocesses (lark-cli waiting for OAuth, long Bash, etc.) and the
@@ -185,16 +207,25 @@ async function* createEventStream(
     return;
   }
 
-  for await (const line of readStdoutLines(child.stdout)) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(trimmed);
-      } catch {
-        continue;
-      }
+  const stats: StdoutJsonStats = createStdoutJsonStats();
+  for await (const parsed of readStdoutJsonLines(child.stdout, { agent: 'claude', stats })) {
     yield* translateEvent(parsed);
+  }
+  log.info('agent', 'stdout-summary', {
+    agent: 'claude',
+    rawLines: stats.rawLines,
+    parsedOk: stats.parsedOk,
+    parseFailed: stats.parseFailed,
+    exitCode: child.exitCode,
+    signal: child.signalCode,
+    ...(stats.parseFailed > 0 ? { failedSamples: stats.failedSamples } : {}),
+  });
+  if (stats.rawLines === 0) {
+    log.warn('agent', 'stdout-empty', {
+      agent: 'claude',
+      exitCode: child.exitCode,
+      signal: child.signalCode,
+    });
   }
 
   const earlyRuntimeError = getError();

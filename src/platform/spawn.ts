@@ -15,6 +15,18 @@ export function spawnProcess(
   return crossSpawn(command, [...args], options);
 }
 
+/**
+ * Truncate every argv element for logging — the prompt / system-prompt args can
+ * be huge, and we only need to see the flags + a preview to confirm the json
+ * mode flag (`--output-format stream-json` / `--mode json`) actually reached the
+ * child. Used to diagnose "agent replied with no content" on Windows, where the
+ * json flag can get swallowed when a large Unicode prompt is passed via the
+ * `.cmd` shim.
+ */
+export function formatSpawnArgsForLog(args: readonly string[], maxLen = 80): string[] {
+  return args.map((a) => (a.length > maxLen ? `${a.slice(0, maxLen)}…(${a.length} chars)` : a));
+}
+
 export function spawnProcessSync(
   command: string,
   args: readonly string[] = [],

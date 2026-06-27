@@ -1,7 +1,17 @@
 import type { Readable } from 'node:stream';
 import { log } from '../../core/logger';
-import { mergeProcessEnv, spawnProcess, type SpawnedProcessByStdio } from '../../platform/spawn';
-import { readStdoutLines } from '../read-stdout-lines';
+import {
+  formatSpawnArgsForLog,
+  mergeProcessEnv,
+  spawnProcess,
+  type SpawnedProcessByStdio,
+} from '../../platform/spawn';
+import {
+  createStdoutJsonStats,
+  readStdoutJsonLines,
+  summarizeAgentEnv,
+  type StdoutJsonStats,
+} from '../read-stdout-lines';
 import { buildBridgeSystemPrompt } from '../bridge-system-prompt';
 import { buildLarkChannelEnv, type LarkChannelEnvContext } from '../lark-channel-env';
 import { checkAgentAvailability, type AgentAvailability } from '../preflight';
@@ -99,12 +109,15 @@ export class CursorAdapter implements AgentAdapter {
 
     log.info('agent', 'spawn', {
       pid: child.pid ?? null,
+      binary: this.binary,
       cwd: opts.cwd ?? process.cwd(),
       hasSession: Boolean(opts.sessionId),
       promptChars: prompt.length,
       model: opts.model,
       agent: 'cursor',
+      args: formatSpawnArgsForLog(args),
     });
+    log.info('agent', 'spawn-env', { agent: 'cursor', ...summarizeAgentEnv(process.env) });
 
     const stderrChunks: Buffer[] = [];
     let runtimeError: Error | null = null;
@@ -202,19 +215,28 @@ async function* createEventStream(
   }
 
   const streamState = createCursorStreamState();
-  for await (const line of readStdoutLines(child.stdout)) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(trimmed);
-      } catch {
-        continue;
-      }
-      if (debug) {
-        console.log('[cursor debug] event', parsed);
-      }
+  const stats: StdoutJsonStats = createStdoutJsonStats();
+  for await (const parsed of readStdoutJsonLines(child.stdout, { agent: 'cursor', debug, stats })) {
+    if (debug) {
+      console.log('[cursor debug] event', parsed);
+    }
     yield* translateEvent(parsed, streamState);
+  }
+  log.info('agent', 'stdout-summary', {
+    agent: 'cursor',
+    rawLines: stats.rawLines,
+    parsedOk: stats.parsedOk,
+    parseFailed: stats.parseFailed,
+    exitCode: child.exitCode,
+    signal: child.signalCode,
+    ...(stats.parseFailed > 0 ? { failedSamples: stats.failedSamples } : {}),
+  });
+  if (stats.rawLines === 0) {
+    log.warn('agent', 'stdout-empty', {
+      agent: 'cursor',
+      exitCode: child.exitCode,
+      signal: child.signalCode,
+    });
   }
 
   const earlyRuntimeError = getError();

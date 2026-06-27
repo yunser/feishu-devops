@@ -2,8 +2,18 @@ import type { Readable, Writable } from 'node:stream';
 import { join } from 'node:path';
 import type { SandboxMode } from '../../config/profile-schema';
 import { log } from '../../core/logger';
-import { mergeProcessEnv, spawnProcess, type SpawnedProcessByStdio } from '../../platform/spawn';
-import { readStdoutLines } from '../read-stdout-lines';
+import {
+  formatSpawnArgsForLog,
+  mergeProcessEnv,
+  spawnProcess,
+  type SpawnedProcessByStdio,
+} from '../../platform/spawn';
+import {
+  createStdoutJsonStats,
+  readStdoutJsonLines,
+  summarizeAgentEnv,
+  type StdoutJsonStats,
+} from '../read-stdout-lines';
 import { SpawnFailed } from '../../runtime/errors';
 import { prefixBridgeSystemPrompt } from '../bridge-system-prompt';
 import { buildLarkChannelEnv, type LarkChannelEnvContext } from '../lark-channel-env';
@@ -115,11 +125,14 @@ export class CodexAdapter implements AgentAdapter {
 
     log.info('agent', 'spawn', {
       pid: child.pid ?? null,
+      binary: this.binary,
       cwd: opts.cwd,
       hasThread: Boolean(opts.threadId),
       promptChars: opts.prompt.length,
       images: opts.images?.length ?? 0,
+      args: formatSpawnArgsForLog(args),
     });
+    log.info('agent', 'spawn-env', { agent: 'codex', ...summarizeAgentEnv(process.env) });
 
     const stderrChunks: Buffer[] = [];
     let runtimeError: Error | null = null;
@@ -218,16 +231,25 @@ async function* createEventStream(
     return;
   }
 
-  for await (const line of readStdoutLines(child.stdout)) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(trimmed);
-      } catch {
-        continue;
-      }
+  const stats: StdoutJsonStats = createStdoutJsonStats();
+  for await (const parsed of readStdoutJsonLines(child.stdout, { agent: 'codex', stats })) {
     yield* translator.translate(parsed);
+  }
+  log.info('agent', 'stdout-summary', {
+    agent: 'codex',
+    rawLines: stats.rawLines,
+    parsedOk: stats.parsedOk,
+    parseFailed: stats.parseFailed,
+    exitCode: child.exitCode,
+    signal: child.signalCode,
+    ...(stats.parseFailed > 0 ? { failedSamples: stats.failedSamples } : {}),
+  });
+  if (stats.rawLines === 0) {
+    log.warn('agent', 'stdout-empty', {
+      agent: 'codex',
+      exitCode: child.exitCode,
+      signal: child.signalCode,
+    });
   }
 
   const earlyRuntimeError = getError();
