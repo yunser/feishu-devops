@@ -40,7 +40,8 @@ export function formatRunningStatus(
     }
   }
 
-  if (interactive) {
+  // 仅对可能仍在等待输入的长跑命令提示；瞬时命令（如 color、pwd）不应误导用户。
+  if (interactive && elapsedSec >= 2) {
     lines.push('', '⌨️ 如需输入，直接发送下一条消息（/stop 取消）');
   }
 
@@ -59,6 +60,8 @@ export async function runShellWithProgress(
   let elapsedSec = 0;
   let tickInFlight = false;
   let outputFlushScheduled = false;
+  let outputFlushTimer: ReturnType<typeof setTimeout> | undefined;
+  let finished = false;
   let stdout = '';
   let stderr = '';
   const progressIntervalMs = getCmdProgressIntervalMs(cfg);
@@ -70,16 +73,18 @@ export async function runShellWithProgress(
   };
 
   const pushProgress = async (partial?: PartialShellOutput) => {
+    if (finished) return;
     elapsedSec = Math.floor((Date.now() - started) / 1000);
     await onProgress(formatRunningStatus(command, elapsedSec, partial, interactive));
   };
 
   const scheduleOutputFlush = () => {
-    if (outputFlushScheduled) return;
+    if (finished || outputFlushScheduled) return;
     outputFlushScheduled = true;
-    setTimeout(() => {
+    outputFlushTimer = setTimeout(() => {
       outputFlushScheduled = false;
-      if (tickInFlight) return;
+      outputFlushTimer = undefined;
+      if (finished || tickInFlight) return;
       tickInFlight = true;
       void pushProgress(getPartialOutput()).finally(() => {
         tickInFlight = false;
@@ -92,7 +97,7 @@ export async function runShellWithProgress(
   const timer =
     progressIntervalMs > 0
       ? setInterval(() => {
-          if (tickInFlight) return;
+          if (finished || tickInFlight) return;
           tickInFlight = true;
           void pushProgress(getPartialOutput()).finally(() => {
             tickInFlight = false;
@@ -117,6 +122,8 @@ export async function runShellWithProgress(
     });
     return formatShellResult(command, result);
   } finally {
+    finished = true;
+    if (outputFlushTimer) clearTimeout(outputFlushTimer);
     if (timer) clearInterval(timer);
     if (interactive && activeCmdSessions && scope) {
       activeCmdSessions.unregister(scope);
