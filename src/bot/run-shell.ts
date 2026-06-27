@@ -108,8 +108,13 @@ async function resolveExpectPath(): Promise<string | undefined> {
   return expectPathPromise;
 }
 
+/** 剥离 SGR/CSI 等 ANSI 控制序列，飞书 markdown 无法渲染终端颜色。 */
+export function stripAnsiCodes(text: string): string {
+  return text.replace(/\u001b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '');
+}
+
 export function normalizeTerminalOutput(text: string): string {
-  return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return stripAnsiCodes(text.replace(/\r\n/g, '\n').replace(/\r/g, '\n'));
 }
 
 const WINDOWS_CP_TO_ENCODING: Record<string, string> = {
