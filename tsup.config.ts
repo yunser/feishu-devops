@@ -10,4 +10,5 @@ export default defineConfig({
   sourcemap: false,
   splitting: false,
   dts: false,
+  external: ['@lydell/node-pty'],
 });

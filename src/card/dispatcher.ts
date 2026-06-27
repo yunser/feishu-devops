@@ -2,6 +2,7 @@ import type { CardActionEvent, LarkChannel, NormalizedMessage } from '@larksuite
 import { log } from '../core/logger';
 import type { ProcessPool } from '../bot/process-pool';
 import type { ActiveRuns } from '../bot/active-runs';
+import type { ActiveCmdSessions } from '../bot/active-cmd-sessions';
 import type { AgentRuntimeState } from '../bot/agent-switch';
 import { runCommandHandler, type CommandContext } from '../bot/commands';
 import type { SessionCatalog } from '../session/catalog';
@@ -17,6 +18,7 @@ export interface CardDispatchDeps {
   sessionCatalog?: SessionCatalog;
   workspaces: WorkspaceStore;
   activeRuns: ActiveRuns;
+  activeCmdSessions?: ActiveCmdSessions;
   processPool?: ProcessPool;
 }
 
@@ -40,6 +42,7 @@ export async function handleCardAction(deps: CardDispatchDeps): Promise<void> {
     scope: chatScope(msg),
     workspaces: deps.workspaces,
     activeRuns: deps.activeRuns,
+    activeCmdSessions: deps.activeCmdSessions,
     sessions: deps.sessions,
     sessionCatalog: deps.sessionCatalog,
     agent: deps.runtime.agent,

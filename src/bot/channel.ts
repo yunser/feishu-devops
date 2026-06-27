@@ -14,9 +14,10 @@ import type { SessionStore } from '../session/store';
 import { SessionStore as SessionStoreImpl } from '../session/store';
 import { WorkspaceStore } from '../workspace/store';
 import { ActiveRuns } from './active-runs';
+import { ActiveCmdSessions } from './active-cmd-sessions';
 import { isAgentEnabled, runAgentMessage } from './agent-run';
 import type { AgentRuntimeState } from './agent-switch';
-import { tryHandleCommand } from './commands';
+import { tryHandleCmdInput, tryHandleCommand } from './commands';
 import { buildFixedReply } from './reply';
 import { ProcessPool } from './process-pool';
 import { chatScope } from './cwd';
@@ -74,6 +75,7 @@ export async function startChannel(
   }
 
   const activeRuns = new ActiveRuns();
+  const activeCmdSessions = new ActiveCmdSessions();
   const pool = new ProcessPool(() => getMaxConcurrentRuns(cfg));
   const activePolicyFingerprints = new Map<string, string>();
 
@@ -131,6 +133,7 @@ export async function startChannel(
             sessions,
             sessionCatalog,
             activeRuns,
+            activeCmdSessions,
             activePolicyFingerprints,
           },
         );
@@ -150,6 +153,7 @@ export async function startChannel(
           sessionCatalog,
           workspaces,
           activeRuns,
+          activeCmdSessions,
           processPool: pool,
         });
       } catch (err) {
@@ -218,6 +222,7 @@ export async function startChannel(
     channel,
     disconnect: async () => {
       await activeRuns.stopAll();
+      activeCmdSessions.stopAll();
       await sessions.flush();
       await sessionCatalog.flush();
       await workspaces.flush();
@@ -232,6 +237,7 @@ interface MessageHandlerContext {
   sessions: SessionStore;
   sessionCatalog: SessionCatalog;
   activeRuns: ActiveRuns;
+  activeCmdSessions: ActiveCmdSessions;
   activePolicyFingerprints: Map<string, string>;
 }
 
@@ -255,22 +261,31 @@ async function handleMessage(
     return;
   }
 
-  const handled = await tryHandleCommand({
+  const scope = chatScope(msg);
+  const cmdInputCtx = {
     channel,
     cfg,
     fullCfg: ctx.runtime.fullCfg,
     profileConfig: ctx.runtime.profileConfig,
     msg,
-    scope: chatScope(msg),
+    scope,
     workspaces,
     activeRuns: ctx.activeRuns,
+    activeCmdSessions: ctx.activeCmdSessions,
     sessions: ctx.sessions,
     sessionCatalog: ctx.sessionCatalog,
     agent: ctx.runtime.agent,
     processPool: ctx.pool,
     runtime: ctx.runtime,
     activePolicyFingerprints: ctx.activePolicyFingerprints,
-  });
+  };
+
+  if (await tryHandleCmdInput(cmdInputCtx)) {
+    log('info', 'cmd-input-handled');
+    return;
+  }
+
+  const handled = await tryHandleCommand(cmdInputCtx);
   if (handled) {
     log('info', 'command-handled');
     return;

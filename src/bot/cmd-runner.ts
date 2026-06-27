@@ -1,6 +1,7 @@
 import type { AppConfig } from '../config/schema';
 import { getCmdProgressIntervalMs, getCmdTimeoutMs } from '../config/schema';
-import { formatShellResult, runShellCommand, truncateShellOutput } from './run-shell';
+import type { ActiveCmdSessions } from './active-cmd-sessions';
+import { formatShellResult, spawnShellCommand, truncateShellOutput } from './run-shell';
 
 const OUTPUT_FLUSH_INTERVAL_MS = 300;
 
@@ -14,6 +15,7 @@ export function formatRunningStatus(
   command: string,
   elapsedSec: number,
   partial?: PartialShellOutput,
+  interactive = false,
 ): string {
   const elapsed = elapsedSec > 0 ? ` (${elapsedSec}s)` : '';
   const lines: string[] = [`⏳ 正在执行…${elapsed}`, '', `$ ${command}`];
@@ -38,6 +40,10 @@ export function formatRunningStatus(
     }
   }
 
+  if (interactive) {
+    lines.push('', '⌨️ 如需输入，直接发送下一条消息（/stop 取消）');
+  }
+
   return lines.join('\n');
 }
 
@@ -46,6 +52,8 @@ export async function runShellWithProgress(
   cfg: AppConfig,
   onProgress: (text: string) => Promise<void>,
   cwd?: string,
+  activeCmdSessions?: ActiveCmdSessions,
+  scope?: string,
 ): Promise<string> {
   const started = Date.now();
   let elapsedSec = 0;
@@ -54,6 +62,7 @@ export async function runShellWithProgress(
   let stdout = '';
   let stderr = '';
   const progressIntervalMs = getCmdProgressIntervalMs(cfg);
+  const interactive = Boolean(activeCmdSessions && scope);
 
   const getPartialOutput = (): PartialShellOutput => {
     const truncated = truncateShellOutput(stdout, stderr);
@@ -62,7 +71,7 @@ export async function runShellWithProgress(
 
   const pushProgress = async (partial?: PartialShellOutput) => {
     elapsedSec = Math.floor((Date.now() - started) / 1000);
-    await onProgress(formatRunningStatus(command, elapsedSec, partial));
+    await onProgress(formatRunningStatus(command, elapsedSec, partial, interactive));
   };
 
   const scheduleOutputFlush = () => {
@@ -92,17 +101,25 @@ export async function runShellWithProgress(
       : undefined;
 
   try {
-    const result = await runShellCommand(command, {
+    const result = await spawnShellCommand(command, {
       cwd,
       timeoutMs: getCmdTimeoutMs(cfg),
+      interactive,
       onOutput: (kind, chunk) => {
         if (kind === 'stdout') stdout += chunk;
         else stderr += chunk;
         scheduleOutputFlush();
       },
+      onSpawn: (handle) => {
+        if (!interactive || !activeCmdSessions || !scope) return;
+        activeCmdSessions.register(scope, { command, handle });
+      },
     });
     return formatShellResult(command, result);
   } finally {
     if (timer) clearInterval(timer);
+    if (interactive && activeCmdSessions && scope) {
+      activeCmdSessions.unregister(scope);
+    }
   }
 }

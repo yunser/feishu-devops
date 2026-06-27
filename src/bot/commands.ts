@@ -15,6 +15,7 @@ import type { SessionCatalog } from '../session/catalog';
 import type { SessionStore } from '../session/store';
 import type { WorkspaceStore } from '../workspace/store';
 import type { ActiveRuns } from './active-runs';
+import type { ActiveCmdSessions } from './active-cmd-sessions';
 import { normalizeCommandInput } from './command-content';
 import { runShellWithProgress } from './cmd-runner';
 import {
@@ -38,6 +39,7 @@ export interface CommandContext {
   scope: string;
   workspaces: WorkspaceStore;
   activeRuns?: ActiveRuns;
+  activeCmdSessions?: ActiveCmdSessions;
   sessions?: SessionStore;
   sessionCatalog?: SessionCatalog;
   agent?: AgentAdapter;
@@ -71,6 +73,24 @@ const CARD_HANDLERS: Record<string, Handler> = {
   stop: handleStop,
   'cwd.view': handleCwdViewCard,
 };
+
+export async function tryHandleCmdInput(ctx: CommandContext): Promise<boolean> {
+  const sessions = ctx.activeCmdSessions;
+  if (!sessions?.has(ctx.scope)) return false;
+
+  const input = normalizeCommandInput(ctx.msg);
+  if (!input) return true;
+
+  if (input.startsWith('/') || input.startsWith('$')) {
+    const cmd = input.split(/\s+/)[0] ?? '';
+    if (cmd === '/stop') return false;
+    await replyText(ctx, '命令仍在执行中，请发送输入内容，或使用 /stop 取消。');
+    return true;
+  }
+
+  sessions.writeStdin(ctx.scope, input);
+  return true;
+}
 
 export async function tryHandleCommand(ctx: CommandContext): Promise<boolean> {
   const input = normalizeCommandInput(ctx.msg);
@@ -131,17 +151,27 @@ async function handleCmd(args: string, ctx: CommandContext): Promise<void> {
   }
 
   if (!args) {
-    await replyText(ctx, '用法: /cmd <shell 命令> 或 $ <shell 命令>\n示例: $ pwd');
+    await replyText(ctx, '用法: /cmd <shell 命令> 或 $ <shell 命令>\n示例: $ pwd\n需要输入时，直接发送下一条消息即可（/stop 取消）');
     return;
   }
 
   const cwd = effectiveCwd(ctx.workspaces, ctx.scope);
 
+  if (ctx.activeCmdSessions?.has(ctx.scope)) {
+    await replyText(ctx, '上一条命令仍在执行，请等待完成或发送 /stop 取消。');
+    return;
+  }
+
   try {
     await streamMarkdownReply(ctx.channel, ctx.msg.chatId, ctx.msg, async (writer) => {
-      const finalText = await runShellWithProgress(args, ctx.cfg, (status) =>
-        writer.setContent(status),
-      cwd);
+      const finalText = await runShellWithProgress(
+        args,
+        ctx.cfg,
+        (status) => writer.setContent(status),
+        cwd,
+        ctx.activeCmdSessions,
+        ctx.scope,
+      );
       await writer.setContent(finalText);
     });
   } catch (err) {
@@ -369,9 +399,10 @@ async function handleResumeUse(sessionId: string, ctx: CommandContext): Promise<
 }
 
 async function handleStop(_args: string, ctx: CommandContext): Promise<void> {
-  const ok = ctx.activeRuns?.interrupt(ctx.scope) ?? false;
-  if (!ok && !ctx.fromCardAction) {
-    await replyText(ctx, '当前没有正在运行的 agent。');
+  const cmdStopped = ctx.activeCmdSessions?.interrupt(ctx.scope) ?? false;
+  const agentStopped = ctx.activeRuns?.interrupt(ctx.scope) ?? false;
+  if (!cmdStopped && !agentStopped && !ctx.fromCardAction) {
+    await replyText(ctx, '当前没有正在运行的任务。');
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "feishu-devops",
-  "version": "26.627.2",
+  "version": "26.627.3",
   "description": "飞书消息 bot：扫码创建应用，通过 Claude Code / Codex 处理消息",
   "type": "module",
   "bin": {
@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@larksuite/channel": "^0.2.0",
+    "@lydell/node-pty": "1.2.0-beta.12",
     "commander": "^12.1.0",
     "cross-spawn": "^7.0.6",
     "graceful-fs": "^4.2.11",
