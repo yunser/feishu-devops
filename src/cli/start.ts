@@ -65,14 +65,16 @@ export async function runStart(opts: StartOptions): Promise<void> {
   await sessionCatalog.load();
 
   let agent;
+  let agentUnavailable = false;
   if (agentKind !== 'disabled') {
     agent = createRuntimeAgent(fullCfg, { configPath, cursorDebug: opts.debug });
     const availability = await checkRuntimeAgentAvailability(agent);
     if (!availability.ok) {
-      console.error(availability.message);
-      process.exit(1);
-    }
-    if (agentKind === 'claude') {
+      console.warn('⚠ Agent 不可用，服务将以无 Agent 模式启动（/cmd、/status 等命令仍可用）');
+      console.warn(availability.message);
+      agent = undefined;
+      agentUnavailable = true;
+    } else if (agentKind === 'claude') {
       try {
         const claudePath = await resolveClaudeBinaryPath();
         console.log(`✓ Claude Code: ${claudePath}`);
@@ -99,6 +101,7 @@ export async function runStart(opts: StartOptions): Promise<void> {
     sessionCatalog,
     cursorDebug: opts.debug,
     configPath,
+    agentUnavailable,
   });
 
   const shutdown = async (signal: string) => {

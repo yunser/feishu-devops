@@ -25,6 +25,8 @@ export interface AgentRuntimeState {
   agent: AgentAdapter | undefined;
   executor: RunExecutor | undefined;
   agentEnabled: boolean;
+  /** 配置了 agent 但启动时不可用（如未安装 CLI）。 */
+  agentUnavailable?: boolean;
   cursorDebug: boolean;
   configPath: string;
 }

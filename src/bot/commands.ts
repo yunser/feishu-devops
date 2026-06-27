@@ -280,7 +280,7 @@ async function handleStatus(_args: string, ctx: CommandContext): Promise<void> {
     effectiveCwd: effective,
     sessionId: isCodex ? catalogEntry?.threadId : sess?.sessionId,
     sessionStale: usesSessionStore && Boolean(cwd && sess && sess.cwd !== cwd),
-    agentName: ctx.agent?.displayName ?? profile?.agentKind ?? 'unknown',
+    agentName: resolveStatusAgentName(ctx),
     runtimeAccess: runtimeAccessStatus(profile),
     activeRun: Boolean(ctx.activeRuns?.get(ctx.scope)),
     queue: ctx.processPool?.snapshot(),
@@ -415,6 +415,14 @@ async function handleSwitch(args: string, ctx: CommandContext): Promise<void> {
 
 function isSwitchableAgentKind(value: string): value is SwitchableAgentKind {
   return value === 'claude' || value === 'codex' || value === 'cursor';
+}
+
+function resolveStatusAgentName(ctx: CommandContext): string {
+  if (ctx.runtime?.agentUnavailable) {
+    const kind = ctx.profileConfig?.agentKind ?? 'agent';
+    return `${kind}（不可用）`;
+  }
+  return ctx.agent?.displayName ?? ctx.profileConfig?.agentKind ?? 'unknown';
 }
 
 function runtimeAccessStatus(

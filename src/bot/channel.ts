@@ -35,6 +35,8 @@ export interface StartChannelOptions {
   sessionCatalog?: SessionCatalog;
   cursorDebug?: boolean;
   configPath?: string;
+  /** Agent 配置存在但启动时不可用（未安装等），命令模式仍可运行。 */
+  agentUnavailable?: boolean;
 }
 
 function log(level: 'info' | 'warn' | 'error', phase: string, detail?: Record<string, unknown>): void {
@@ -49,8 +51,9 @@ export async function startChannel(
 ): Promise<BotChannel> {
   const fullCfg = (startOpts.cfg ?? cfg) as FullAppConfig;
   const configPath = startOpts.configPath ?? paths.configFile;
+  const profileConfig = toProfileConfig(fullCfg);
   const agentEnabled = Boolean(startOpts.agent) && isAgentEnabled(fullCfg);
-  const profileConfig = agentEnabled ? toProfileConfig(fullCfg) : undefined;
+  const agentUnavailable = startOpts.agentUnavailable === true;
 
   configureLogger({ logsDir: `${paths.rootDir}/logs` });
 
@@ -83,6 +86,7 @@ export async function startChannel(
         ? new RunExecutor({ agent: startOpts.agent, pool, activeRuns })
         : undefined,
     agentEnabled,
+    agentUnavailable,
     cursorDebug: startOpts.cursorDebug === true,
     configPath,
   };
@@ -200,12 +204,14 @@ export async function startChannel(
     bot: identity?.name ?? 'unknown',
     openId: identity?.openId ?? '-',
     appId: app.id,
-    agent: runtime.agentEnabled ? runtime.profileConfig?.agentKind : 'disabled',
+    agent: agentEnabled ? profileConfig.agentKind : agentUnavailable ? 'unavailable' : 'disabled',
   });
   console.log(
-    runtime.agentEnabled
-      ? `正在监听消息（agent: ${runtime.profileConfig?.agentKind ?? 'unknown'}）。按 Ctrl+C 退出。\n`
-      : '正在监听消息。按 Ctrl+C 退出。\n',
+    agentEnabled
+      ? `正在监听消息（agent: ${profileConfig.agentKind}）。按 Ctrl+C 退出。\n`
+      : agentUnavailable
+        ? `正在监听消息（agent 不可用，斜杠命令与固定回复仍可用）。按 Ctrl+C 退出。\n`
+        : '正在监听消息。按 Ctrl+C 退出。\n',
   );
 
   return {

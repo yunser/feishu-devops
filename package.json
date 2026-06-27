@@ -1,6 +1,6 @@
 {
   "name": "feishu-devops",
-  "version": "26.627.0",
+  "version": "26.627.1",
   "description": "飞书消息 bot：扫码创建应用，通过 Claude Code / Codex 处理消息",
   "type": "module",
   "bin": {
