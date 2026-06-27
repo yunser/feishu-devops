@@ -108,13 +108,28 @@ async function resolveExpectPath(): Promise<string | undefined> {
   return expectPathPromise;
 }
 
-/** 剥离 SGR/CSI 等 ANSI 控制序列，飞书 markdown 无法渲染终端颜色。 */
+/** 剥离 OSC/SGR/CSI 等终端控制序列，飞书 markdown 无法渲染。 */
 export function stripAnsiCodes(text: string): string {
-  return text.replace(/\u001b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '');
+  return text
+    .replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g, '')
+    .replace(/\u001b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '')
+    .replace(/\u0007/g, '');
+}
+
+/** 按终端语义处理 `\r`：回到行首覆盖，而不是当作换行。 */
+function normalizeCarriageReturns(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => {
+      const parts = line.split('\r');
+      return parts[parts.length - 1] ?? '';
+    })
+    .join('\n');
 }
 
 export function normalizeTerminalOutput(text: string): string {
-  return stripAnsiCodes(text.replace(/\r\n/g, '\n').replace(/\r/g, '\n'));
+  const lf = text.replace(/\r\n/g, '\n');
+  return normalizeCarriageReturns(stripAnsiCodes(lf));
 }
 
 const WINDOWS_CP_TO_ENCODING: Record<string, string> = {
@@ -432,6 +447,11 @@ export async function spawnShellCommand(
         });
       });
     });
+  }
+
+  if (opts.interactive && process.platform === 'win32') {
+    // Windows 下 pipe 模式的 PowerShell 输出更接近原生终端；PTY 会混入 OSC 标题序列和 \r 表格重绘。
+    return spawnPipeShellCommand(command, opts);
   }
 
   try {

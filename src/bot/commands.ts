@@ -17,7 +17,7 @@ import type { WorkspaceStore } from '../workspace/store';
 import type { ActiveRuns } from './active-runs';
 import type { ActiveCmdSessions } from './active-cmd-sessions';
 import { normalizeCommandInput } from './command-content';
-import { runShellWithProgress } from './cmd-runner';
+import { formatRunningStatus, runShellWithProgress } from './cmd-runner';
 import {
   chatScope,
   effectiveCwd,
@@ -163,17 +163,23 @@ async function handleCmd(args: string, ctx: CommandContext): Promise<void> {
   }
 
   try {
-    await streamMarkdownReply(ctx.channel, ctx.msg.chatId, ctx.msg, async (writer) => {
-      const finalText = await runShellWithProgress(
-        args,
-        ctx.cfg,
-        (status) => writer.setContent(status),
-        cwd,
-        ctx.activeCmdSessions,
-        ctx.scope,
-      );
-      await writer.setContent(finalText);
-    });
+    await streamMarkdownReply(
+      ctx.channel,
+      ctx.msg.chatId,
+      ctx.msg,
+      async (writer) => {
+        const finalText = await runShellWithProgress(
+          args,
+          ctx.cfg,
+          (status) => writer.setContent(status),
+          cwd,
+          ctx.activeCmdSessions,
+          ctx.scope,
+        );
+        await writer.setContent(finalText);
+      },
+      { initialText: formatRunningStatus(args, 0) },
+    );
   } catch (err) {
     console.warn('[cmd] stream failed, falling back to plain send:', err);
     const result = await runShellCommand(args, {
