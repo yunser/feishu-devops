@@ -7,7 +7,6 @@ export type WorkingDirectoryRejectReason =
   | 'path-inaccessible'
   | 'not-directory'
   | 'filesystem-root'
-  | 'home-root'
   | 'user-root'
   | 'system-root'
   | 'temp-root'
@@ -72,9 +71,6 @@ function classifyHighRiskWorkingDirectory(
   }
 
   const home = resolve(homedir());
-  if (real === home) {
-    return reject('home-root', requestedCwd, '不能把 Home 根目录设为工作目录，请选择更具体的子目录。');
-  }
   if (real === dirname(home)) {
     return reject('user-root', requestedCwd, '不能把用户目录根设为工作目录，请选择更具体的子目录。');
   }
