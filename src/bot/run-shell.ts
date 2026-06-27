@@ -13,7 +13,11 @@ export interface ShellRunResult {
 
 export async function runShellCommand(
   command: string,
-  opts: { cwd?: string; timeoutMs?: number } = {},
+  opts: {
+    cwd?: string;
+    timeoutMs?: number;
+    onOutput?: (kind: 'stdout' | 'stderr', chunk: string) => void;
+  } = {},
 ): Promise<ShellRunResult> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const cwd = opts.cwd ?? process.cwd();
@@ -37,15 +41,19 @@ export async function runShellCommand(
     }, timeoutMs);
 
     child.stdout?.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString('utf8');
+      const text = chunk.toString('utf8');
+      stdout += text;
+      opts.onOutput?.('stdout', text);
     });
     child.stderr?.on('data', (chunk: Buffer) => {
-      stderr += chunk.toString('utf8');
+      const text = chunk.toString('utf8');
+      stderr += text;
+      opts.onOutput?.('stderr', text);
     });
 
     child.on('close', (exitCode) => {
       clearTimeout(timer);
-      const truncated = truncate(stdout, stderr);
+      const truncated = truncateShellOutput(stdout, stderr);
       resolve({
         stdout: truncated.stdout,
         stderr: truncated.stderr,
@@ -68,7 +76,10 @@ export async function runShellCommand(
   });
 }
 
-function truncate(stdout: string, stderr: string): { stdout: string; stderr: string; truncated: boolean } {
+export function truncateShellOutput(
+  stdout: string,
+  stderr: string,
+): { stdout: string; stderr: string; truncated: boolean } {
   const combined = stdout.length + stderr.length;
   if (combined <= MAX_OUTPUT_CHARS) {
     return { stdout, stderr, truncated: false };
