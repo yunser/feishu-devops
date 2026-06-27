@@ -24,7 +24,7 @@ export function buildUnit(inputs: UnitInputs): string {
   const escape = (s: string): string => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const execStart = [inputs.program, ...inputs.runArgs].map((part) => `"${escape(part)}"`).join(' ');
   return `[Unit]
-Description=Feishu Message Test bot
+Description=Feishu Devops bot
 After=network-online.target
 Wants=network-online.target
 
@@ -37,7 +37,7 @@ RestartSec=5
 StandardOutput=append:${daemonStdoutPath()}
 StandardError=append:${daemonStderrPath()}
 Environment="PATH=${escape(inputs.envPath)}"
-Environment="FEISHU_MESSAGE_TEST_HOME=${escape(inputs.channelHome)}"
+Environment="FEISHU_DEVOPS_HOME=${escape(inputs.channelHome)}"
 
 [Install]
 WantedBy=default.target

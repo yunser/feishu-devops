@@ -57,7 +57,7 @@ ${argsXml}
     <dict>
         <key>PATH</key>
         <string>${escape(inputs.envPath)}</string>
-        <key>FEISHU_MESSAGE_TEST_HOME</key>
+        <key>FEISHU_DEVOPS_HOME</key>
         <string>${escape(inputs.channelHome)}</string>
     </dict>
 </dict>

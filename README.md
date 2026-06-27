@@ -1,4 +1,4 @@
-# feishu-message-test
+# feishu-devops
 
 飞书消息收发测试项目。参考 [lark-coding-agent-bridge](https://github.com/zarazhangrui/feishu-claude-code-bridge)，但**不对接 LLM**，仅做固定内容回复。
 
@@ -38,7 +38,7 @@ npm run build
 npm run start:dist
 ```
 
-扫码完成后，配置会保存到 `~/.feishu-message-test/config.json`。
+扫码完成后，配置会保存到 `~/.feishu-devops/config.json`。
 
 在飞书中找到刚创建的应用，发私聊消息或在群里 @ 机器人：
 
@@ -48,7 +48,7 @@ npm run start:dist
 ## 使用已有应用
 
 ```bash
-node bin/feishu-message-test.mjs run \
+node bin/feishu-devops.mjs run \
   --app-id cli_xxxxxxxxxxxx \
   --app-secret <your-secret> \
   --tenant feishu
@@ -57,14 +57,14 @@ node bin/feishu-message-test.mjs run \
 国际版 Lark：
 
 ```bash
-node bin/feishu-message-test.mjs run --app-id cli_xxx --app-secret <secret> --tenant lark
+node bin/feishu-devops.mjs run --app-id cli_xxx --app-secret <secret> --tenant lark
 ```
 
 ## 配置
 
-配置文件默认路径：`~/.feishu-message-test/config.json`
+配置文件默认路径：`~/.feishu-devops/config.json`
 
-可通过环境变量 `FEISHU_MESSAGE_TEST_HOME` 修改数据目录。
+可通过环境变量 `FEISHU_DEVOPS_HOME` 修改数据目录。
 
 ```json
 {

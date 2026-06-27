@@ -44,7 +44,7 @@ async function bootstrapAppConfig(opts: BootstrapOptions): Promise<AppConfig> {
     if (!isInteractiveTerminal()) {
       throw new Error(
         '当前没有配置，非交互模式无法完成扫码创建应用。' +
-          '请先在终端运行 `feishu-message-test run` 完成首次初始化，' +
+          '请先在终端运行 `feishu-devops run` 完成首次初始化，' +
           '或传入 --app-id 和 --app-secret。',
       );
     }

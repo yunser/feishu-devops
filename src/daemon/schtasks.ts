@@ -27,7 +27,7 @@ export function buildLauncherCmd(inputs: LauncherInputs): string {
   return [
     '@echo off',
     `cd /d "${inputs.cwd.replace(/"/g, '""')}"`,
-    `set "FEISHU_MESSAGE_TEST_HOME=${inputs.channelHome}"`,
+    `set "FEISHU_DEVOPS_HOME=${inputs.channelHome}"`,
     `set "PATH=${inputs.envPath}"`,
     `${cmdParts} >> "${daemonStdoutPath()}" 2>> "${daemonStderrPath()}"`,
     '',

@@ -17,7 +17,7 @@ import { createCursorStreamState, translateEvent } from './stream-json';
 export interface CursorAdapterOptions {
   binary?: string;
   larkChannel?: LarkChannelEnvContext;
-  /** 打印 spawn args 与每条原生 stream-json 事件。也可通过 FEISHU_MESSAGE_TEST_CURSOR_DEBUG=1 开启。 */
+  /** 打印 spawn args 与每条原生 stream-json 事件。也可通过 FEISHU_DEVOPS_CURSOR_DEBUG=1 开启。 */
   debug?: boolean;
 }
 
@@ -25,7 +25,7 @@ function isCursorDebugEnabled(explicit?: boolean): boolean {
   if (explicit === true) return true;
   if (explicit === false) return false;
   const raw =
-    process.env.FEISHU_MESSAGE_TEST_CURSOR_DEBUG ?? process.env.LARK_CHANNEL_CURSOR_DEBUG;
+    process.env.FEISHU_DEVOPS_CURSOR_DEBUG ?? process.env.LARK_CHANNEL_CURSOR_DEBUG;
   return raw === '1' || raw === 'true';
 }
 

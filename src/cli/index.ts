@@ -23,7 +23,7 @@ function normalizeArgv(argv: readonly string[]): string[] {
 const program = new Command();
 
 program
-  .name('feishu-message-test')
+  .name('feishu-devops')
   .description('飞书消息收发测试：扫码创建应用，接收消息并固定内容回复')
   .version(pkg.version, '-v, --version');
 

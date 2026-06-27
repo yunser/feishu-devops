@@ -102,7 +102,7 @@ export async function runServiceStart(opts: ServiceStartOptions = {}): Promise<v
   console.log(`    ${daemonStdoutPath()}`);
   console.log(`    ${daemonStderrPath()}`);
   console.log(`  配置目录: ${paths.rootDir}`);
-  console.log('  停止: feishu-message-test stop');
+  console.log('  停止: feishu-devops stop');
 }
 
 export async function runServiceStop(): Promise<void> {
@@ -122,7 +122,7 @@ export async function runServiceStop(): Promise<void> {
     process.exit(1);
   }
   console.log('✓ bot 已停止运行');
-  console.log('  通过 `npm start` 或 `feishu-message-test start` 可再次启动');
+  console.log('  通过 `npm start` 或 `feishu-devops start` 可再次启动');
 }
 
 /**
@@ -150,7 +150,7 @@ export async function runServiceRestart(opts: ServiceStartOptions = {}): Promise
     console.log(`    ${daemonStdoutPath()}`);
     console.log(`    ${daemonStderrPath()}`);
     console.log(`  配置目录: ${paths.rootDir}`);
-    console.log('  停止: feishu-message-test stop');
+    console.log('  停止: feishu-devops stop');
     return;
   }
 
@@ -165,7 +165,7 @@ export async function runServiceRestart(opts: ServiceStartOptions = {}): Promise
   console.log(`    ${daemonStdoutPath()}`);
   console.log(`    ${daemonStderrPath()}`);
   console.log(`  配置目录: ${paths.rootDir}`);
-  console.log('  停止: feishu-message-test stop');
+  console.log('  停止: feishu-devops stop');
 }
 
 export async function runServiceStatus(): Promise<void> {

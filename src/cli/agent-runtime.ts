@@ -43,7 +43,7 @@ export function createRuntimeAgent(
   }
   if (profileConfig.agentKind === 'cursor') {
     const command =
-      process.env.FEISHU_MESSAGE_TEST_CURSOR_BIN ??
+      process.env.FEISHU_DEVOPS_CURSOR_BIN ??
       process.env.LARK_CHANNEL_CURSOR_BIN ??
       'agent';
     return new CursorAdapter({
@@ -72,18 +72,18 @@ export async function checkRuntimeAgentAvailability(
 }
 
 export async function resolveCodexBinaryPath(): Promise<string> {
-  const command = process.env.FEISHU_MESSAGE_TEST_CODEX_BIN ?? process.env.LARK_CHANNEL_CODEX_BIN ?? 'codex';
+  const command = process.env.FEISHU_DEVOPS_CODEX_BIN ?? process.env.LARK_CHANNEL_CODEX_BIN ?? 'codex';
   return resolveExecutablePath(command);
 }
 
 export async function resolveClaudeBinaryPath(): Promise<string> {
-  const command = process.env.FEISHU_MESSAGE_TEST_CLAUDE_BIN ?? process.env.LARK_CHANNEL_CLAUDE_BIN ?? 'claude';
+  const command = process.env.FEISHU_DEVOPS_CLAUDE_BIN ?? process.env.LARK_CHANNEL_CLAUDE_BIN ?? 'claude';
   return resolveExecutablePath(command);
 }
 
 export async function resolveCursorBinaryPath(): Promise<string> {
   const command =
-    process.env.FEISHU_MESSAGE_TEST_CURSOR_BIN ?? process.env.LARK_CHANNEL_CURSOR_BIN ?? 'agent';
+    process.env.FEISHU_DEVOPS_CURSOR_BIN ?? process.env.LARK_CHANNEL_CURSOR_BIN ?? 'agent';
   return resolveExecutablePath(command);
 }
 

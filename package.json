@@ -1,21 +1,26 @@
 {
-  "name": "feishu-message-test",
+  "name": "feishu-devops",
   "version": "0.1.0",
   "description": "飞书消息 bot：扫码创建应用，通过 Claude Code / Codex 处理消息",
   "type": "module",
   "bin": {
-    "feishu-message-test": "./bin/feishu-message-test.mjs"
+    "feishu-devops": "./bin/feishu-devops.mjs"
   },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
   "scripts": {
     "dev": "tsx watch src/cli/index.ts run",
     "start": "tsx src/cli/index.ts start",
     "stop": "tsx src/cli/index.ts stop",
     "restart": "tsx src/cli/index.ts restart",
     "build": "tsup",
-    "start:dist": "node bin/feishu-message-test.mjs start",
+    "start:dist": "node bin/feishu-devops.mjs start",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm typecheck && pnpm build",
-    "publish": "pnpm publish"
+    "publish": "npm publish --access public"
   },
   "dependencies": {
     "@larksuite/channel": "^0.2.0",

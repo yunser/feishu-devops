@@ -2,7 +2,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { paths } from '../config/paths';
 
-export const SERVICE_NAME = 'feishu-message-test.bot';
+export const SERVICE_NAME = 'feishu-devops.bot';
 
 export function launchAgentLabel(): string {
   return `ai.${SERVICE_NAME}`;
@@ -22,7 +22,7 @@ export function systemdUnitPath(): string {
 }
 
 export function windowsTaskName(): string {
-  return 'FeishuMessageTest.Bot';
+  return 'FeishuDevops.Bot';
 }
 
 export function windowsLauncherCmdPath(): string {
