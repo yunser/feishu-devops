@@ -146,6 +146,7 @@ export function helpCard(agentName = 'Agent'): object {
         '- `/stop` — 结束当前正在跑的任务',
         '- `/use claude|codex|cursor|pi` — 切换 agent（无需重启）',
         '- `/cmd <shell>` / `$ <shell>` — 本机执行 shell',
+        '- `/send <path>` — 发送本地文件',
         '- `/help` — 本帮助',
         '',
         `其他内容直接交给 ${escapedAgentName}。`,

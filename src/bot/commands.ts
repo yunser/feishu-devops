@@ -1,3 +1,5 @@
+import { readFile, stat } from 'node:fs/promises';
+import { basename, resolve } from 'node:path';
 import type { LarkChannel, NormalizedMessage } from '@larksuite/channel';
 import type { AgentAdapter } from '../agent/types';
 import type { AgentRuntimeState, SwitchableAgentKind } from './agent-switch';
@@ -56,6 +58,7 @@ const HANDLERS: Record<string, Handler> = {
   '/stop': handleStop,
   '/status': handleStatus,
   '/resume': handleResume,
+  '/send': handleSend,
   '/use': handleSwitch,
 };
 
@@ -370,6 +373,47 @@ async function handleStop(_args: string, ctx: CommandContext): Promise<void> {
   if (!ok && !ctx.fromCardAction) {
     await replyText(ctx, '当前没有正在运行的 agent。');
   }
+}
+
+async function handleSend(args: string, ctx: CommandContext): Promise<void> {
+  const input = args.trim();
+  if (!input) {
+    await replyText(
+      ctx,
+      '用法: /send <文件路径>\n示例: /send ./README.md 或 /send ~/Downloads/foo.pdf',
+    );
+    return;
+  }
+
+  const absPath = resolveSendPath(input, ctx);
+  const info = await stat(absPath).catch(() => undefined);
+  if (!info) {
+    await replyText(ctx, `文件不存在或不可访问：\`${input}\``);
+    return;
+  }
+  if (!info.isFile()) {
+    await replyText(ctx, `不是文件：\`${absPath}\``);
+    return;
+  }
+
+  const fileName = basename(absPath);
+  const sendOpts = buildSendOpts(ctx.msg);
+
+  try {
+    const data = await readFile(absPath);
+    await ctx.channel.send(ctx.msg.chatId, { file: { source: data, fileName } }, sendOpts);
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    const msg = err instanceof Error ? err.message : String(err);
+    await replyText(ctx, `❌ 发送失败${code ? ` (${code})` : ''}：${msg}`);
+  }
+}
+
+function resolveSendPath(input: string, ctx: CommandContext): string {
+  if (isAbsoluteOrTilde(input)) {
+    return resolve(expandTilde(input));
+  }
+  return resolve(effectiveCwd(ctx.workspaces, ctx.scope), input);
 }
 
 async function handleSwitch(args: string, ctx: CommandContext): Promise<void> {
