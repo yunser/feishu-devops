@@ -1,4 +1,4 @@
-import type { Readable } from 'node:stream';
+import type { Readable, Writable } from 'node:stream';
 import { log } from '../../core/logger';
 import {
   formatSpawnArgsForLog,
@@ -12,7 +12,7 @@ import {
   summarizeAgentEnv,
   type StdoutJsonStats,
 } from '../read-stdout-lines';
-import { buildBridgeSystemPrompt } from '../bridge-system-prompt';
+import { prefixBridgeSystemPrompt } from '../bridge-system-prompt';
 import { buildLarkChannelEnv, type LarkChannelEnvContext } from '../lark-channel-env';
 import { checkAgentAvailability, type AgentAvailability } from '../preflight';
 import type {
@@ -38,7 +38,7 @@ function isPiDebugEnabled(explicit?: boolean): boolean {
   return raw === '1' || raw === 'true';
 }
 
-type PiChild = SpawnedProcessByStdio<null, Readable, Readable>;
+type PiChild = SpawnedProcessByStdio<Writable, Readable, Readable>;
 
 export class PiAdapter implements AgentAdapter {
   readonly id = 'pi';
@@ -78,27 +78,29 @@ export class PiAdapter implements AgentAdapter {
       throw new Error('cwd is required for PiAdapter.run');
     }
 
-    const systemPrompt = buildBridgeSystemPrompt(this.botIdentity);
+    // Pass the prompt via stdin, not argv — see claude adapter for the full
+    // rationale. In short: the bridge prompt is full of `"`, backticks and `<>`
+    // which break cmd.exe argument quoting on the Windows `.cmd` shim, silently
+    // swallowing `--mode json` and making pi emit plain text ("未返回内容").
+    const stdinPrompt = prefixBridgeSystemPrompt(opts.prompt, this.botIdentity);
     const args = ['--mode', 'json', '-p'];
-    if (systemPrompt) {
-      args.push('--append-system-prompt', systemPrompt);
-    }
     if (opts.sessionId) args.push('--session-id', opts.sessionId);
     if (opts.model) args.push('--model', opts.model);
-    args.push(opts.prompt);
 
     if (this.debug) {
       console.log('[pi debug] spawn', {
         binary: this.binary,
         cwd: opts.cwd,
         args: formatDebugArgs(args),
+        promptChars: stdinPrompt.length,
+        via: 'stdin',
       });
     }
 
     const child = spawnProcess(this.binary, args, {
       cwd: opts.cwd,
       env: mergeProcessEnv(process.env, buildLarkChannelEnv(this.larkChannel)),
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['pipe', 'pipe', 'pipe'],
     }) as PiChild;
 
     log.info('agent', 'spawn', {
@@ -106,7 +108,8 @@ export class PiAdapter implements AgentAdapter {
       binary: this.binary,
       cwd: opts.cwd ?? process.cwd(),
       hasSession: Boolean(opts.sessionId),
-      promptChars: opts.prompt.length,
+      promptChars: stdinPrompt.length,
+      via: 'stdin',
       model: opts.model,
       agent: 'pi',
       args: formatSpawnArgsForLog(args),
@@ -139,6 +142,10 @@ export class PiAdapter implements AgentAdapter {
     child.on('exit', (code, signal) => {
       log.info('agent', 'exit', { pid: child.pid ?? null, code, signal, agent: 'pi' });
     });
+    child.stdin.on('error', (err) => {
+      log.warn('agent', 'stdin-error', { message: err.message, agent: 'pi' });
+    });
+    child.stdin.end(stdinPrompt, 'utf8');
 
     const stopGraceMs = opts.stopGraceMs ?? 5000;
 

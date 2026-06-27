@@ -1,4 +1,4 @@
-import type { Readable } from 'node:stream';
+import type { Readable, Writable } from 'node:stream';
 import { log } from '../../core/logger';
 import {
   formatSpawnArgsForLog,
@@ -39,7 +39,7 @@ function isCursorDebugEnabled(explicit?: boolean): boolean {
   return raw === '1' || raw === 'true';
 }
 
-type CursorChild = SpawnedProcessByStdio<null, Readable, Readable>;
+type CursorChild = SpawnedProcessByStdio<Writable, Readable, Readable>;
 
 export class CursorAdapter implements AgentAdapter {
   readonly id = 'cursor';
@@ -82,14 +82,11 @@ export class CursorAdapter implements AgentAdapter {
     const systemPrompt = buildBridgeSystemPrompt(this.botIdentity);
     const prompt = systemPrompt ? `${systemPrompt}\n\n${opts.prompt}` : opts.prompt;
 
-    const args = [
-      '-p',
-      '--force',
-      '--output-format',
-      'stream-json',
-      '--stream-partial-output',
-      prompt,
-    ];
+    // Pass the prompt via stdin, not argv — see claude adapter for the full
+    // rationale. The bridge prompt is full of `"`, backticks and `<>` which
+    // break cmd.exe argument quoting on the Windows `.cmd`/shim path, silently
+    // swallowing `--output-format stream-json` ("未返回内容").
+    const args = ['-p', '--force', '--output-format', 'stream-json', '--stream-partial-output'];
     if (opts.sessionId) args.push('--resume', opts.sessionId);
     if (opts.model) args.push('--model', opts.model);
 
@@ -98,13 +95,15 @@ export class CursorAdapter implements AgentAdapter {
         binary: this.binary,
         cwd: opts.cwd,
         args: formatDebugArgs(args),
+        promptChars: prompt.length,
+        via: 'stdin',
       });
     }
 
     const child = spawnProcess(this.binary, args, {
       cwd: opts.cwd,
       env: mergeProcessEnv(process.env, buildLarkChannelEnv(this.larkChannel)),
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['pipe', 'pipe', 'pipe'],
     }) as CursorChild;
 
     log.info('agent', 'spawn', {
@@ -145,6 +144,10 @@ export class CursorAdapter implements AgentAdapter {
     child.on('exit', (code, signal) => {
       log.info('agent', 'exit', { pid: child.pid ?? null, code, signal, agent: 'cursor' });
     });
+    child.stdin.on('error', (err) => {
+      log.warn('agent', 'stdin-error', { message: err.message, agent: 'cursor' });
+    });
+    child.stdin.end(prompt, 'utf8');
 
     const stopGraceMs = opts.stopGraceMs ?? 5000;
 
