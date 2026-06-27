@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import pkg from '../../package.json';
 import { runServiceRestart, runServiceStart, runServiceStatus, runServiceStop } from './service';
 import { runStart } from './start';
+import { runUpdate } from './update';
 
 /**
  * pnpm/npm 传参时常见 `run -- --agent cursor`，中间的 `--` 会让 Commander
@@ -134,6 +135,13 @@ program
   .description('查看后台 daemon 状态')
   .action(async () => {
     await runServiceStatus();
+  });
+
+program
+  .command('update')
+  .description('全局安装最新版本（npm install -g feishu-devops@latest）')
+  .action(async () => {
+    await runUpdate();
   });
 
 program.parseAsync(normalizeArgv(process.argv)).catch((err: unknown) => {
