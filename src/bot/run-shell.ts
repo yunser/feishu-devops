@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import * as pty from '@lydell/node-pty';
@@ -53,6 +53,60 @@ export function normalizeTerminalOutput(text: string): string {
   return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
 
+const WINDOWS_CP_TO_ENCODING: Record<string, string> = {
+  '65001': 'utf-8',
+  '936': 'gb18030',
+  '54936': 'gb18030',
+  '950': 'big5',
+  '932': 'shift_jis',
+  '949': 'euc-kr',
+  '1252': 'windows-1252',
+  '437': 'ibm437',
+};
+
+let windowsShellEncoding: string | undefined;
+
+function detectWindowsShellEncoding(): string {
+  if (windowsShellEncoding) return windowsShellEncoding;
+  if (process.platform !== 'win32') {
+    windowsShellEncoding = 'utf-8';
+    return windowsShellEncoding;
+  }
+
+  try {
+    const result = spawnSync('cmd.exe', ['/d', '/s', '/c', 'chcp'], { encoding: 'buffer' });
+    const output = Buffer.concat([
+      result.stdout ?? Buffer.alloc(0),
+      result.stderr ?? Buffer.alloc(0),
+    ]);
+    const chcpText = new TextDecoder('gb18030').decode(output);
+    const match = chcpText.match(/:\s*(\d+)/);
+    const cp = match?.[1] ?? '936';
+    windowsShellEncoding = WINDOWS_CP_TO_ENCODING[cp] ?? 'gb18030';
+  } catch {
+    windowsShellEncoding = 'gb18030';
+  }
+
+  return windowsShellEncoding;
+}
+
+export function decodeShellOutput(chunk: Buffer): string {
+  if (process.platform !== 'win32') {
+    return chunk.toString('utf8');
+  }
+
+  const encoding = detectWindowsShellEncoding();
+  if (encoding === 'utf-8') {
+    return chunk.toString('utf8');
+  }
+
+  try {
+    return new TextDecoder(encoding).decode(chunk);
+  } catch {
+    return chunk.toString('utf8');
+  }
+}
+
 function writePtyLine(term: pty.IPty, text: string): void {
   const line = text.endsWith('\n') ? text.slice(0, -1) : text;
   term.write(`${line}\r`);
@@ -63,10 +117,10 @@ function attachOutputPump(
   onChunk: (kind: 'stdout' | 'stderr', text: string) => void,
 ): void {
   child.stdout?.on('data', (chunk: Buffer) => {
-    onChunk('stdout', normalizeTerminalOutput(chunk.toString('utf8')));
+    onChunk('stdout', normalizeTerminalOutput(decodeShellOutput(chunk)));
   });
   child.stderr?.on('data', (chunk: Buffer) => {
-    onChunk('stderr', normalizeTerminalOutput(chunk.toString('utf8')));
+    onChunk('stderr', normalizeTerminalOutput(decodeShellOutput(chunk)));
   });
 }
 
