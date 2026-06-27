@@ -9,7 +9,7 @@ export interface ServiceStartOptions {
   appId?: string;
   appSecret?: string;
   tenant?: string;
-  agent?: 'claude' | 'codex' | 'cursor' | 'disabled';
+  agent?: 'claude' | 'codex' | 'cursor' | 'pi' | 'disabled';
   debug?: boolean;
 }
 

@@ -319,7 +319,9 @@ async function handleResume(args: string, ctx: CommandContext): Promise<void> {
             ? '当前 Codex thread'
             : profile?.agentKind === 'cursor'
               ? '当前 Cursor 会话'
-              : '当前 Claude 会话',
+              : profile?.agentKind === 'pi'
+                ? '当前 Pi 会话'
+                : '当前 Claude 会话',
           relTime: '当前',
           current: true,
         },
@@ -358,7 +360,8 @@ async function handleResumeUse(sessionId: string, ctx: CommandContext): Promise<
   }
 
   ctx.sessions?.set(ctx.scope, sessionId, cwd);
-  const agentLabel = profile?.agentKind === 'cursor' ? 'Cursor' : 'Claude';
+  const agentLabel =
+    profile?.agentKind === 'cursor' ? 'Cursor' : profile?.agentKind === 'pi' ? 'Pi' : 'Claude';
   await replyMarkdown(ctx, `✓ 已恢复 ${agentLabel} 会话，请继续发送消息。`);
 }
 
@@ -377,7 +380,7 @@ async function handleSwitch(args: string, ctx: CommandContext): Promise<void> {
 
   const kind = args.trim().toLowerCase();
   if (!isSwitchableAgentKind(kind)) {
-    await replyText(ctx, '用法: `/use claude` | `/use codex` | `/use cursor`');
+    await replyText(ctx, '用法: `/use claude` | `/use codex` | `/use cursor` | `/use pi`');
     return;
   }
 
@@ -414,7 +417,7 @@ async function handleSwitch(args: string, ctx: CommandContext): Promise<void> {
 }
 
 function isSwitchableAgentKind(value: string): value is SwitchableAgentKind {
-  return value === 'claude' || value === 'codex' || value === 'cursor';
+  return value === 'claude' || value === 'codex' || value === 'cursor' || value === 'pi';
 }
 
 function resolveStatusAgentName(ctx: CommandContext): string {
@@ -440,6 +443,9 @@ function runtimeAccessStatus(
   }
   if (profile.agentKind === 'cursor') {
     return { label: 'mode', value: 'force' };
+  }
+  if (profile.agentKind === 'pi') {
+    return { label: 'mode', value: 'json' };
   }
   return {
     label: 'sandbox',

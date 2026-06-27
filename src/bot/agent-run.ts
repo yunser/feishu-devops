@@ -1,5 +1,5 @@
 import type { LarkChannel, NormalizedMessage } from '@larksuite/channel';
-import { claudeCapability, codexCapability, cursorCapability } from '../agent/capability';
+import { claudeCapability, codexCapability, cursorCapability, piCapability } from '../agent/capability';
 import { buildAgentPrompt } from '../agent/prompt';
 import type { AgentEvent } from '../agent/types';
 import { renderCard } from '../card/run-renderer';
@@ -84,7 +84,9 @@ export async function runAgentMessage(deps: AgentRunDeps, msg: NormalizedMessage
       ? codexCapability(profileConfig)
       : profileConfig.agentKind === 'cursor'
         ? cursorCapability(profileConfig)
-        : claudeCapability(profileConfig);
+        : profileConfig.agentKind === 'pi'
+          ? piCapability(profileConfig)
+          : claudeCapability(profileConfig);
 
   const scopeContext: ScopeContext = {
     source: 'im',

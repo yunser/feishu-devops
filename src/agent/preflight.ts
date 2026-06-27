@@ -1,6 +1,6 @@
 import { spawnProcess } from '../platform/spawn';
 
-export type LocalAgentId = 'claude' | 'codex' | 'cursor';
+export type LocalAgentId = 'claude' | 'codex' | 'cursor' | 'pi';
 
 export type AgentPreflightErrorCode =
   | 'agent-binary-not-found'
@@ -279,7 +279,10 @@ export function isAgentPreflightDiagnostic(input: unknown): input is AgentPrefli
   return (
     typeof raw.code === 'string' &&
     raw.code.startsWith('agent-') &&
-    (raw.agentId === 'claude' || raw.agentId === 'codex' || raw.agentId === 'cursor') &&
+    (raw.agentId === 'claude' ||
+      raw.agentId === 'codex' ||
+      raw.agentId === 'cursor' ||
+      raw.agentId === 'pi') &&
     typeof raw.agentName === 'string' &&
     typeof raw.command === 'string'
   );

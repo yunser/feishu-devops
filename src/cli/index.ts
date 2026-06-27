@@ -32,7 +32,7 @@ const runOptions = [
   ['--app-id <id>', '使用已有飞书应用（跳过扫码创建）'],
   ['--app-secret <secret>', 'App Secret（配合 --app-id）'],
   ['--tenant <tenant>', '租户域名：feishu 或 lark（默认 feishu）'],
-  ['--agent <kind>', 'agent 类型：claude / codex / cursor / disabled（默认 claude）'],
+  ['--agent <kind>', 'agent 类型：claude / codex / cursor / pi / disabled（默认 claude）'],
   ['--debug', 'Cursor agent 调试：打印 spawn args 与原生 stream-json 事件'],
 ] as const;
 
@@ -48,13 +48,14 @@ function parseRunOpts(opts: {
   appId?: string;
   appSecret?: string;
   tenant?: string;
-  agent?: 'claude' | 'codex' | 'cursor' | 'disabled';
+  agent?: 'claude' | 'codex' | 'cursor' | 'pi' | 'disabled';
   debug?: boolean;
 } {
   const agent =
     opts.agent === 'claude' ||
     opts.agent === 'codex' ||
     opts.agent === 'cursor' ||
+    opts.agent === 'pi' ||
     opts.agent === 'disabled'
       ? opts.agent
       : undefined;

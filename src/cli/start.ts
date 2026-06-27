@@ -6,6 +6,7 @@ import {
   resolveClaudeBinaryPath,
   resolveCodexBinaryPath,
   resolveCursorBinaryPath,
+  resolvePiBinaryPath,
 } from './agent-runtime';
 import { startChannel } from '../bot/channel';
 import type { FullAppConfig } from '../config/agent-config';
@@ -31,7 +32,7 @@ export interface StartOptions {
   appId?: string;
   appSecret?: string;
   tenant?: string;
-  agent?: 'claude' | 'codex' | 'cursor' | 'disabled';
+  agent?: 'claude' | 'codex' | 'cursor' | 'pi' | 'disabled';
   /** 开启 Cursor agent 调试输出（spawn args + 原生 stream-json 事件） */
   debug?: boolean;
 }
@@ -49,6 +50,8 @@ export async function runStart(opts: StartOptions): Promise<void> {
       fullCfg = applyAgentKindToConfig(fullCfg, 'codex', binaryPath);
     } else if (agentKind === 'cursor') {
       fullCfg = applyAgentKindToConfig(fullCfg, 'cursor');
+    } else if (agentKind === 'pi') {
+      fullCfg = applyAgentKindToConfig(fullCfg, 'pi');
     } else {
       fullCfg = applyAgentKindToConfig(fullCfg, 'claude');
     }
@@ -87,6 +90,13 @@ export async function runStart(opts: StartOptions): Promise<void> {
         console.log(`✓ Cursor Agent: ${cursorPath}${opts.debug ? ' (debug)' : ''}`);
       } catch {
         console.log(`✓ Cursor Agent: agent${opts.debug ? ' (debug)' : ''}`);
+      }
+    } else if (agentKind === 'pi') {
+      try {
+        const piPath = await resolvePiBinaryPath();
+        console.log(`✓ Pi Agent: ${piPath}${opts.debug ? ' (debug)' : ''}`);
+      } catch {
+        console.log(`✓ Pi Agent: pi${opts.debug ? ' (debug)' : ''}`);
       }
     } else {
       console.log(`✓ Codex CLI: ${fullCfg.codex?.binaryPath ?? 'codex'}`);

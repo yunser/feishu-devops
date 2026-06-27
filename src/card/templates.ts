@@ -144,7 +144,7 @@ export function helpCard(agentName = 'Agent'): object {
         '- `/cwd view` — 查看工作目录',
         '- `/status` — 当前状态',
         '- `/stop` — 结束当前正在跑的任务',
-        '- `/use claude|codex|cursor` — 切换 agent（无需重启）',
+        '- `/use claude|codex|cursor|pi` — 切换 agent（无需重启）',
         '- `/cmd <shell>` / `$ <shell>` — 本机执行 shell',
         '- `/help` — 本帮助',
         '',

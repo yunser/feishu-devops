@@ -17,7 +17,7 @@ import type { SessionStore } from '../session/store';
 import type { ActiveRuns } from './active-runs';
 import type { ProcessPool } from './process-pool';
 
-export type SwitchableAgentKind = 'claude' | 'codex' | 'cursor';
+export type SwitchableAgentKind = 'claude' | 'codex' | 'cursor' | 'pi';
 
 export interface AgentRuntimeState {
   fullCfg: FullAppConfig;
@@ -116,6 +116,9 @@ async function buildConfigForKind(
   if (kind === 'cursor') {
     return applyAgentKindToConfig(cfg, 'cursor');
   }
+  if (kind === 'pi') {
+    return applyAgentKindToConfig(cfg, 'pi');
+  }
   return applyAgentKindToConfig(cfg, 'claude');
 }
 
@@ -137,5 +140,6 @@ function clearAgentSessionState(sessions: SessionStore, sessionCatalog: SessionC
 function agentLabel(kind: SwitchableAgentKind): string {
   if (kind === 'codex') return 'Codex CLI';
   if (kind === 'cursor') return 'Cursor Agent';
+  if (kind === 'pi') return 'Pi Agent';
   return 'Claude Code';
 }

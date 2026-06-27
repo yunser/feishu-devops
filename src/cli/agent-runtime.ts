@@ -1,4 +1,4 @@
-import { ClaudeAdapter, CodexAdapter, CursorAdapter } from '../agent';
+import { ClaudeAdapter, CodexAdapter, CursorAdapter, PiAdapter } from '../agent';
 import type { AgentAdapter } from '../agent/types';
 import {
   formatAgentPreflightError,
@@ -52,6 +52,14 @@ export function createRuntimeAgent(
       ...(opts.cursorDebug === true ? { debug: true } : {}),
     });
   }
+  if (profileConfig.agentKind === 'pi') {
+    const command = process.env.FEISHU_DEVOPS_PI_BIN ?? process.env.LARK_CHANNEL_PI_BIN ?? 'pi';
+    return new PiAdapter({
+      binary: command,
+      larkChannel,
+      ...(opts.cursorDebug === true ? { debug: true } : {}),
+    });
+  }
   return new ClaudeAdapter({ larkChannel });
 }
 
@@ -87,9 +95,14 @@ export async function resolveCursorBinaryPath(): Promise<string> {
   return resolveExecutablePath(command);
 }
 
+export async function resolvePiBinaryPath(): Promise<string> {
+  const command = process.env.FEISHU_DEVOPS_PI_BIN ?? process.env.LARK_CHANNEL_PI_BIN ?? 'pi';
+  return resolveExecutablePath(command);
+}
+
 export function applyAgentKindToConfig(
   cfg: FullAppConfig,
-  agentKind: 'claude' | 'codex' | 'cursor',
+  agentKind: 'claude' | 'codex' | 'cursor' | 'pi',
   codexBinaryPath?: string,
 ): FullAppConfig {
   const next: FullAppConfig = { ...cfg, agentKind };

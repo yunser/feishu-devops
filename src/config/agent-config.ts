@@ -20,7 +20,13 @@ export type FullAppConfig = AppConfig & AgentConfigFields;
 
 export function toProfileConfig(cfg: FullAppConfig): ProfileConfig {
   const agentKind: AgentKind =
-    cfg.agentKind === 'codex' ? 'codex' : cfg.agentKind === 'cursor' ? 'cursor' : 'claude';
+    cfg.agentKind === 'codex'
+      ? 'codex'
+      : cfg.agentKind === 'cursor'
+        ? 'cursor'
+        : cfg.agentKind === 'pi'
+          ? 'pi'
+          : 'claude';
   const base = {
     schemaVersion: 2 as const,
     agentKind,
