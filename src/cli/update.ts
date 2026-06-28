@@ -1,5 +1,27 @@
 import pkg from '../../package.json';
-import { spawnProcess } from '../platform/spawn';
+import { spawnProcess, spawnProcessSync } from '../platform/spawn';
+
+function getGlobalInstalledVersion(packageName: string): string | undefined {
+  const fromBin = spawnProcessSync(packageName, ['--version'], { encoding: 'utf8' });
+  const binStdout = fromBin.stdout;
+  const binVersion = typeof binStdout === 'string' ? binStdout.trim() : undefined;
+  if (fromBin.status === 0 && binVersion) return binVersion;
+
+  const fromNpm = spawnProcessSync('npm', ['list', '-g', packageName, '--depth=0', '--json'], {
+    encoding: 'utf8',
+  });
+  const npmStdout = fromNpm.stdout;
+  if (fromNpm.status !== 0 || typeof npmStdout !== 'string') return undefined;
+
+  try {
+    const data = JSON.parse(npmStdout) as {
+      dependencies?: Record<string, { version?: string }>;
+    };
+    return data.dependencies?.[packageName]?.version;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * `update` — 通过 npm 全局安装最新版本。
@@ -24,5 +46,10 @@ export async function runUpdate(): Promise<void> {
     process.exit(exitCode ?? 1);
   }
 
-  console.log(`✓ ${packageName} 已更新到最新版本`);
+  const version = getGlobalInstalledVersion(packageName);
+  if (version) {
+    console.log(`✓ ${packageName} 已更新到 ${version}`);
+  } else {
+    console.log(`✓ ${packageName} 已更新到最新版本`);
+  }
 }

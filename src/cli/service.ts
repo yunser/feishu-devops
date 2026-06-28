@@ -50,7 +50,7 @@ function printServiceFailure(stderr: string): void {
     console.error('当前环境无法连接 systemd 用户 D-Bus（常见于 SSH、Docker、无图形会话）。');
     console.error('');
     console.error('可选方案：');
-    console.error('  1. 前台运行: feishu-devops run');
+    console.error('  1. 前台运行: chat-devops run');
     console.error('  2. 启用 systemd 用户会话后重试:');
     console.error('       export XDG_RUNTIME_DIR=/run/user/$(id -u)');
     console.error('       sudo loginctl enable-linger $USER');
@@ -122,7 +122,7 @@ export async function runServiceStart(opts: ServiceStartOptions = {}): Promise<v
   console.log(`    ${daemonStdoutPath()}`);
   console.log(`    ${daemonStderrPath()}`);
   console.log(`  配置目录: ${paths.rootDir}`);
-  console.log('  停止: feishu-devops stop');
+  console.log('  停止: chat-devops stop');
 }
 
 export async function runServiceStop(): Promise<void> {
@@ -142,7 +142,7 @@ export async function runServiceStop(): Promise<void> {
     process.exit(1);
   }
   console.log('✓ bot 已停止运行');
-  console.log('  通过 `npm start` 或 `feishu-devops start` 可再次启动');
+  console.log('  通过 `npm start` 或 `chat-devops start` 可再次启动');
 }
 
 /**
@@ -170,7 +170,7 @@ export async function runServiceRestart(opts: ServiceStartOptions = {}): Promise
     console.log(`    ${daemonStdoutPath()}`);
     console.log(`    ${daemonStderrPath()}`);
     console.log(`  配置目录: ${paths.rootDir}`);
-    console.log('  停止: feishu-devops stop');
+    console.log('  停止: chat-devops stop');
     return;
   }
 
@@ -188,7 +188,7 @@ export async function runServiceRestart(opts: ServiceStartOptions = {}): Promise
   console.log(`    ${daemonStdoutPath()}`);
   console.log(`    ${daemonStderrPath()}`);
   console.log(`  配置目录: ${paths.rootDir}`);
-  console.log('  停止: feishu-devops stop');
+  console.log('  停止: chat-devops stop');
 }
 
 export async function runServiceStatus(): Promise<void> {

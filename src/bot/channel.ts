@@ -98,7 +98,7 @@ export async function startChannel(
     appSecret: app.secret,
     domain:
       app.tenant === 'lark' ? 'https://open.larksuite.com' : 'https://open.feishu.cn',
-    source: 'feishu-devops',
+    source: 'chat-devops',
     policy: {
       dmMode: 'open',
       requireMention: false,

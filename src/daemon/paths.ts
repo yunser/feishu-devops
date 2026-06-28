@@ -2,7 +2,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { paths } from '../config/paths';
 
-export const SERVICE_NAME = 'feishu-devops.bot';
+export const SERVICE_NAME = 'chat-devops.bot';
 
 export function launchAgentLabel(): string {
   return `ai.${SERVICE_NAME}`;

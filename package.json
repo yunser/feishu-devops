@@ -1,10 +1,10 @@
 {
-  "name": "feishu-devops",
-  "version": "26.627.3",
+  "name": "chat-devops",
+  "version": "26.1.2",
   "description": "飞书消息 bot：扫码创建应用，通过 Claude Code / Codex 处理消息",
   "type": "module",
   "bin": {
-    "feishu-devops": "./bin/feishu-devops.mjs"
+    "chat-devops": "./bin/chat-devops.mjs"
   },
   "files": [
     "dist",
@@ -17,7 +17,7 @@
     "stop": "tsx src/cli/index.ts stop",
     "restart": "tsx src/cli/index.ts restart",
     "build": "tsup",
-    "start:dist": "node bin/feishu-devops.mjs start",
+    "start:dist": "node bin/chat-devops.mjs start",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm typecheck && pnpm build",
     "publish": "npm publish --access public"

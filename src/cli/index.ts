@@ -24,7 +24,7 @@ function normalizeArgv(argv: readonly string[]): string[] {
 const program = new Command();
 
 program
-  .name('feishu-devops')
+  .name('chat-devops')
   .description('飞书消息收发测试：扫码创建应用，接收消息并固定内容回复')
   .version(pkg.version, '-v, --version');
 
@@ -139,7 +139,7 @@ program
 
 program
   .command('update')
-  .description('全局安装最新版本（npm install -g feishu-devops@latest）')
+  .description('全局安装最新版本（npm install -g chat-devops@latest）')
   .action(async () => {
     await runUpdate();
   });

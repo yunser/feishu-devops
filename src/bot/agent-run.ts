@@ -53,7 +53,7 @@ export interface AgentRunDeps {
   activePolicyFingerprints: Map<string, string>;
 }
 
-/** feishu-devops 默认开放访问（不做 allowlist 拦截）。 */
+/** chat-devops 默认开放访问（不做 allowlist 拦截）。 */
 function openAccess(): AccessDecision {
   return { ok: true, reason: 'allowed-user' };
 }

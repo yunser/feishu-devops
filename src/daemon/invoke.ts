@@ -30,7 +30,7 @@ function resolveTsxCli(projectRoot: string): string {
 
 /**
  * Resolve how the OS service manager should invoke `run`.
- * Supports compiled entry (`node bin/feishu-devops.mjs`) and dev entry
+ * Supports compiled entry (`node bin/chat-devops.mjs`) and dev entry
  * (`tsx src/cli/index.ts`).
  */
 export function resolveDaemonRunInvocation(extraRunArgs: string[] = []): DaemonRunInvocation {

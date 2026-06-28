@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const rootDir = process.env.FEISHU_DEVOPS_HOME ?? join(homedir(), '.feishu-devops');
+const rootDir = process.env.FEISHU_DEVOPS_HOME ?? join(homedir(), '.chat-devops');
 
 export const paths = {
   rootDir,
